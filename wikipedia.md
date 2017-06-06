@@ -9,6 +9,11 @@ Note: overall time: 45 minutes (leave 5-10 min for questions)
 
 THOUGHT: make second half of talk about analyzing Java and Gradle
 
+## Brief mention
+
+Briefly mention [android-architecture](https://github.com/googlesamples/android-architecture) repository as good source of good, simple examples. "But we are going to dive into some real-world apps" to see how things are done in the wild.
+...would be good to emphasize use of third-party libraries, as well (something which the sample code will not do)
+
 ## Wikipedia mobile app
 
 How the Wikipedia mobile app works

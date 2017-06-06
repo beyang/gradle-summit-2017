@@ -25,4 +25,17 @@
 - Notably missing: use of Butterknife, Dagger, or any other dependency injection tools
 - `ImageCache`: downloading images efficiently (how does Wikipedia do this? Some reinvention of the wheel between `ImageCache` and Wikipedia's `WikiCachedService`)
 
-"How is the feed initialized?" <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< TODO: START HERE
+"How is the feed initialized?"
+
+- `DuckDuckGo.onCreate` -> `displayHomeScreen` -> `displayScreen` -> `changeFragment`
+  - `FragmentManager.beginTransaction` + `FragmentTransaction`, `FragmentManager.popBackStack` + `FragmentManager.popBackStackImmediate`
+
+- [`DDGControlVar`](https://sourcegraph.com/github.com/duckduckgo/android-search-and-stories/-/blob/src/com/duckduckgo/mobile/android/util/DDGControlVar.java#L26:48) an interesting way to keep track of global state
+
+- [`SCREEN`](https://sourcegraph.com/github.com/duckduckgo/android-search-and-stories/-/blob/src/com/duckduckgo/mobile/android/util/SCREEN.java#L3:13) enum: a different approach to reverse mapping an enum type (contrast with the map-based approach in the Wikipedia app)
+
+"How does one issue a search query?"
+
+"How does autocomplete work?"
+
+"How are results fetched?"
