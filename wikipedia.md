@@ -1,5 +1,14 @@
 # Outline
 
+## Overall takeaways
+
+Note: overall time: 45 minutes (leave 5-10 min for questions)
+
+- Good artists copy. Great ones steal.
+- A good way to start a new project is to take a look at existing ones like it.
+
+THOUGHT: make second half of talk about analyzing Java and Gradle
+
 ## Wikipedia mobile app
 
 How the Wikipedia mobile app works
@@ -80,8 +89,6 @@ FeedFragment
 
 [x] "How does it fetch data from remote?"
 
-"How does it persist data?"
+[x] "How does it persist data?"
 
 PageFragment
-
-TODO: ReadingList (reading/writing persistent data)
