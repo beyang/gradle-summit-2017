@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <style>
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      body { font-family: 'Droid Serif'; }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: normal;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+      .footer {
+          position: absolute;
+          bottom: 12px;
+          left: 20px;
+          font-size: 12pt;
+      }
+    </style>
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, middle
+
+# Learning Android by example,
+# the smart way
+
+---
+# Agenda
+
+1. Intro
+
+1. Wikipedia
+
+1. DuckDuckGo
+
+1. PocketHub
+
+1. Analysis
+
+???
+
+This talk is a technique to teach yourself and others a new Android
+codebase and a Gradle-enabled tool we built to make that technique
+much easier and more powerful.
+
+---
+# About me
+
+Was a T.A. in college (started with iOS development)
+
+TODO: more
+
+???
+
+Being a T.A. made me think a lot about how to introduce people to new
+codebases, both because this was a problem facing students, but even
+more so because this is a problem facing every T.A. Every new
+assignment, you have 10-12 coding projects to look through. Without a
+framework in place, it can be easy to lose track, lose focus, and
+spend a lot of time without really gaining a good understanding of the
+codebase.
+
+Code is hard to read, because there's no narrative arc. So, invent one
+by creating a dialogue between you and the code.
+
+---
+# Intro
+
+"Good artists copy. Great artists steal." —Picasso
+
+"Good programmers copy. Great programmers copy and paste." —Beyang
+
+???
+
+IMPORTANT: At this point, ask everyone to pull out their Android
+phones, download the Wikipedia app and visit the slides link to follow
+along. Make people follow along. Point out that the links to source
+code should be followed, and folks should stay in the source code (and
+only refer back to the slides if they get lost).
+
+---
+## Wikipedia App
+
+A "medium-size" app.
+
+* 827 Java files
+
+* 100,225 lines of code
+
+* 5,376 commits over 4 years
+
+If the Wikipedia Android app were a book, it'd be half the length of *Moby Dick* or just under the average length of a *Harry Potter* book.<sup>*</sup>
+
+.footer[\* Assuming 1 word == 1 LoC]
+
+--
+
+<h2>Spark notes, anyone?</h2>
+
+---
+## Android development 101
+
+(TODO: have a diagram here)
+
+- `View`: What the user sees. Often defined as XML with some Java logic bound to it.
+- `Activity`: The "controller"
+- `Fragment`
+- `Adapter`
+- SQLite
+- Resources: static assets
+
+---
+# How do you dive into a new codebase?
+
+Good approaches:
+
+* Read the docs
+* Fix a bug
+* Get a tutorial from a coworker
+
+Bad approaches that sound good:
+
+* "Read" the source code
+
+???
+The good approaches all work, but have their issues.
+
+* Reading the docs is a good way to get a high-level overview, but the
+docs are often out of date, and they are disconnected from the
+on-the-ground effort of working with the code.  They're like reading a
+book about building a radio, as opposed to actually doing it.
+
+* Fixing a bug is the other
+end of the spectrum. You focus on a very specific problem with a clear definition of success. You can't skimp
+on understanding. You have to understand the issue through and through. But at the end, you have a deep, but
+narrow slice of the big picture. Indeed, many developers often go many months or even years with working
+knowledge of only a small subsection of their codebase.
+
+* Often, the best way to spin up on a piece of code is to have a
+conversation with a coworker who wrote or maintains it. But that has
+it's own issues: you only get a limited amount of time with that
+person and helping you means they can't get work done.
+
+Often the only solution is time. The more time you spend developing on
+a codebase, the better you will understand it. But is there a way to
+shortcut this? To get a high-level overview of a codebase that you
+otherwise might not obtain until months into the job? That's both
+valuable in the long run (if you want to become a tech lead or senior
+developer) and good for immediate working knowledge?
+
+The bad approach sounds good, and a lot of people will tell you to do
+it, but in my experience, most of the best programmers I've worked
+with don't actually do it too much, outside of code review. And when
+they do do it, they don't do the way most people would assume they do.
+
+---
+## Have a conversation with your code
+
+* Eliminates analysis paralysis
+
+* Gives you "working model" of entire codebase (note: doesn't have to be 100% complete or even accurate)
+
+* It's fun
+
+???
+"A branching, dialectic process"
+"The Sourcegraph Way"
+
+---
+### The "trunk"
+
+1. Where's the 'main' function?
+1. How does it arrive at its initial state?
+1. What are the options presented to the user from there?
+
+---
+### Wikipedia App
+
+1\. Where's the "main" function?
+```java
+public class MainActivity {
+  public void onCreate(Bundle savedInstanceState) {
+    ...
+  }
+}
+```
+([source](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/main/MainActivity.java#L13:14-13:26))
+
+---
+2\. How does it arrive at its initial state?
+
+Android SDK relies on inheritance, so look at class hierarchy:
+
+```java
+class org.wikipedia.MainActivity
+	extends SingleFragmentToolbarActivity<MainFragment>
+	extends SingleFragmentActivity<T extends Fragment>
+	extends ThemedActionBarActivity
+	extends BaseActivity
+	extends AppCompatActivity;
+```
+([source](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/main/MainActivity.java#L21:29-21:40))
+
+`AppCompatActivity` documentation:
+
+> Base class for activities that use the support library action bar features.
+
+[TODO: image of NavBar UI]
+
+---
+2b\. How does the initial navbar item (the news feed) get displayed?
+
+```java
+void MainActivity::onCreate(Bundle savedInstanceState)
+➜ MainFragment MainActivity::createFragment()
+  ➜ MainFragment MainFragment::newInstance()
+    ➜ new MainFragment()
+	  ➜ View MainFragment::onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
+```
+
+```java
+View MainFragment::onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
+➜ R.layout.fragment_main
+  ➜ NavTabLayout.setTabViews
+    ➜ NavTab implements EnumCode
+      ➜ FeedFragment.newInstance()
+```
+
+[Butterknife](https://github.com/JakeWharton/butterknife) is used
+to
+[bind view to fragment](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/main/MainFragment.java#L106:32-106:36).
+
+[TODO: add more code snippets here]
+
+---
+3\. What are the options for the user from here?
+
+```java
+public enum NavTab implements EnumCode {
+    EXPLORE(R.string.nav_item_feed, R.drawable.ic_globe) {
+        @NonNull @Override public Fragment newInstance() {
+            return FeedFragment.newInstance();
+        }
+    },
+    READING_LISTS(R.string.nav_item_reading_lists, R.drawable.ic_bookmark_white_24dp) {
+        @NonNull @Override public Fragment newInstance() {
+            return ReadingListsFragment.newInstance();
+        }
+    },
+    HISTORY(R.string.nav_item_history, R.drawable.ic_restore_black_24dp) {
+        @NonNull @Override public Fragment newInstance() {
+            return HistoryFragment.newInstance();
+        }
+    },
+    NEARBY(R.string.nav_item_nearby, R.drawable.ic_explore_black_24dp) {
+        @NonNull @Override public Fragment newInstance() {
+            return NearbyFragment.newInstance();
+        }
+    };
+
+    ...
+}
+```
+
+[TODO: add image of app, highlighting 4 tab options]
+
+---
+# Now what?
+
+Choose your adventure:
+
+1. How does the feed work?
+
+   * Are there any clever frontend performance techniques?
+
+   * Any clever techniques for fetching or caching data?
+
+   * How do I get the pull-down-to-refresh?
+   
+1. How are reading lists persisted?
+
+1. How does the app efficiently load nearby points of interest in the
+   map view?
+
+???
+
+* Better to start with a user-facing feature as the root of the
+  question, rather than a vague question that purely has to do with
+  the code like "How does this app persist data?" If you're interested
+  in learning about data persistence, find an app feature that
+  requires data persistence and go from there.
+* And you must commit to an adventure. Don't try to go down all paths
+  at once.
+
+
+---
+# How does the feed work?
+
+What state does `FeedFragment` keep and how is it initialized?
+
+```java
+public class FeedFragment extends Fragment implements BackPressedHandler {
+    @BindView(R.id.feed_swipe_refresh_layout) SwipeRefreshLayout swipeRefreshLayout;
+    @BindView(R.id.fragment_feed_feed) FeedView feedView;
+    @BindView(R.id.fragment_feed_header) View feedHeader;
+    private FeedAdapter<?> feedAdapter;
+    private WikipediaApp app;
+    private FeedCoordinator coordinator;
+    private FeedFunnel funnel;
+    private final FeedAdapter.Callback feedCallback = new FeedCallback();
+    private FeedScrollListener feedScrollListener = new FeedScrollListener();
+    private OverflowCallback overflowCallback = new OverflowCallback();
+
+    ...
+
+    @Nullable @Override public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        super.onCreateView(inflater, container, savedInstanceState);
+        View view = inflater.inflate(R.layout.fragment_feed, container, false);
+        ...
+    }
+
+    ...
+}
+
+```
+([source](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/FeedFragment.java#L44:14-44:26))
+
+---
+# How does FeedView work?
+
+Great use of the `RecyclerView` ("A flexible view for providing a limited window into a large data set.") in the Android SDK.
+
+The
+[documentation](https://developer.android.com/reference/android/support/v7/widget/RecyclerView.html) is
+13,000 words long.
+
+---
+# How does FeedView work (initialization)?
+
+The fragment wires up the view to adapter, callback, and scrollback listener
+```java
+@Nullable @Override public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+
+        ...
+
+        feedAdapter = new FeedAdapter<>(coordinator, feedCallback);
+        feedView.setAdapter(feedAdapter);
+        feedView.setCallback(feedCallback);
+        feedView.addOnScrollListener(feedScrollListener);
+}
+```
+
+---
+# How does the feed create new cards?
+
+By [`FeedAdapter.onCreateViewHolder`](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/view/FeedAdapter.java#L42:43-42:61):
+```java
+    @Override public DefaultViewHolder<T> onCreateViewHolder(ViewGroup parent, int viewType) {
+        return new DefaultViewHolder<>(newView(parent.getContext(), viewType));
+    }
+```
+which calls [`FeedAdapter.newView`](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/view/FeedAdapter.java#L85:24-85:31),
+which calls [`FeedAdapter.getItemViewType`](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/view/FeedAdapter.java#L77:26-77:41):
+```java
+    @Override public int getItemViewType(int position) {
+        return item(position).type().code();
+    }
+```
+which calls [`DefaultRecyclerAdapter.item`](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/views/DefaultRecyclerAdapter.java#L21:17),
+which references an instance of a superclass of `FeedAdapter`,
+which [invokes the superclass constructor like this](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/view/FeedAdapter.java#L37-38):
+```java
+        super(coordinator.getCards());
+```
+which leads us to [`FeedCoordinatorBase`](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/FeedCoordinatorBase.java#L23:23-23:42).
+
+---
+# How does `FeedCoordinatorBase` obtain the data to populate the cards?
+
+* Find all references to [`FeedCoordinatorBase.cards`](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/FeedCoordinatorBase.java#L35:39-35:44).
+* The only additions to the `cards` array can be traced back to
+  the
+  [`FeedCoordinatorBase.more`](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/FeedCoordinatorBase.java#L72:17-72:21) method.
+
+TODO: fill this in
+
+???
+
+A common issue with table / list views on mobile is performance. How
+do you load only what's necessary to cut down on bandwidth needs and
+frontend lag?
+
+---
+# How are reading lists persisted?
+
+TODO
+
+---
+# How does the app efficient load nearby points of interest in the map view?
+
+TODO
+
+
+
+
+
+
+
+---
+# The code reading tool we built
+
+---
+# Java language server
+
+???
+
+TODO: credit Aaron Leung in slides
+
+---
+# LSP
+
+
+---
+# How does Gradle make this all a lot easier?
+
+
+
+---
+# How you can make your Gradle projects as accessible to analysis tools
+
+1. Adhere to conventions
+
+1. Favor simplicity over unnecessary fanciness
+
+
+
+---
+# Contact me
+
+Beyang Liu
+
+[Sourcegraph](http://sourcegraph.com/)
+
+beyang@sourcegraph.com
+
+[@beyang](https://twitter.com/beyang)
+
+
+---
+# Appendix
+
+---
+# DuckDuckGo app
+
+TODO
+
+---
+# PocketHub app
+
+TODO
+
+
+
+
+
+
+    </textarea>
+    <script src="https://remarkjs.com/downloads/remark-latest.min.js">
+    </script>
+    <script>
+      var slideshow = remark.create();
+    </script>
+  </body>
+</html>
