@@ -173,11 +173,13 @@ they do do it, they don't do the way most people would assume they do.
 "The Sourcegraph Way"
 
 ---
-### The "trunk"
+### The "icebreaker"
 
-1. Where's the 'main' function?
-1. How does it arrive at its initial state?
-1. What are the options presented to the user from there?
+1. Where's your "main" function?
+
+1. How do you arrive at your initial state?
+
+1. What options do you present to the user from there?
 
 ---
 ### Wikipedia App
@@ -288,6 +290,8 @@ Choose your adventure:
 1. How does the app efficiently load nearby points of interest in the
    map view?
 
+1. How is this app tested?
+
 ???
 
 * Better to start with a user-facing feature as the root of the
@@ -381,7 +385,7 @@ which [invokes the superclass constructor like this](https://sourcegraph.com/git
 which leads us to [`FeedCoordinatorBase`](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/FeedCoordinatorBase.java#L23:23-23:42).
 
 ---
-# How does `FeedCoordinatorBase` obtain the data to populate the cards?
+# How does FeedCoordinatorBase obtain the data to populate the cards?
 
 * Find all references to [`FeedCoordinatorBase.cards`](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/FeedCoordinatorBase.java#L35:39-35:44).
 * The only additions to the `cards` array can be traced back to
@@ -397,16 +401,202 @@ do you load only what's necessary to cut down on bandwidth needs and
 frontend lag?
 
 ---
-# How are reading lists persisted?
+# How are reading lists displayed?
 
-TODO
+Another `RecyclerView` pattern, with an inner-class adapter:
+
+```java
+public class ReadingListsFragment extends Fragment {
+    private Unbinder unbinder;
+    @BindView(R.id.reading_list_list) RecyclerView readingListView;
+    @BindView(R.id.empty_container) View emptyContainer;
+    @BindView(R.id.search_empty_view) SearchEmptyView searchEmptyView;
+
+    private ReadingLists readingLists = new ReadingLists();
+    private ReadingListsFunnel funnel = new ReadingListsFunnel();
+    private EventBusMethods eventBusMethods = new EventBusMethods();
+
+    private ReadingListAdapter adapter = new ReadingListAdapter();
+    private ReadingListItemCallback listItemCallback = new ReadingListItemCallback();
+    private ReadingListsSearchCallback searchActionModeCallback = new ReadingListsSearchCallback();
+    @Nullable private ActionMode actionMode;
+```
+
 
 ---
-# How does the app efficient load nearby points of interest in the map view?
+# How are reading lists persisted?
+
+Trace data from view to adapter back to model.
+
+```java
+private final class ReadingListAdapter extends RecyclerView.Adapter<ReadingListItemHolder> {
+    @Override
+    public int getItemCount() {
+        return readingLists.size();
+    }
+```
+
+`ReadingLists` model class.
+```java
+public class ReadingLists {
+
+    ...
+    
+    public void set(@NonNull List<ReadingList> lists) {
+        this.lists = lists;
+    }
+}
+```
+Let's find references to its `set` method.
+
+---
+
+This callback sets the `lists` field in the model class. It fetches the data by calling `ReadingList.DAO.queryMruLists`,
+```java
+public class ReadingListFragment extends Fragment implements ReadingListItemActionsDialog.Callback {
+
+    ...
+
+    private void updateReadingListData() {
+        ReadingList.DAO.queryMruLists(null, new CallbackTask.DefaultCallback<List<ReadingList>>() {
+            @Override public void success(List<ReadingList> lists) {
+                if (getActivity() == null) {
+                    return;
+                }
+                readingLists.set(lists);
+                readingList = readingLists.get(readingListTitle);
+                if (readingList != null) {
+                    searchEmptyView.setEmptyText(getString(R.string.search_reading_list_no_results,
+                            readingList.getTitle()));
+                }
+                update();
+            }
+        });
+    }
+```
+
+which is defined in `ReadingListData`.
+```java
+public final class ReadingListData {
+    ...
+    public List<ReadingList> queryMruLists(@Nullable String searchQuery) {
+        List<ReadingList> rows = new ArrayList<>();
+        Cursor cursor = lists(searchQuery);
+```
+
+---
+
+`ReadingListData.list` invokes `select` on `listClient()`,
+```java
+    @NonNull public Cursor lists(@Nullable String searchQuery) {
+        Uri uri = ReadingListContract.ListWithPagesAndDisk.URI;
+        String selection = null;
+        String[] selectionArgs = null;
+        String searchStr = searchQuery;
+        ...
+        return listClient().select(uri, selection, selectionArgs, order);
+    }
+```
+
+which returns an instance of `DatabaseClient`.
+```java
+    private DatabaseClient<ReadingListRow> listClient() {
+        return client(ReadingListRow.class);
+    }
+```
+
+```java
+    private <T> DatabaseClient<T> client(Class<T> clazz) {
+        return WikipediaApp.getInstance().getDatabaseClient(clazz);
+    }
+```
+
+---
+
+The `WikipediaApp` subclass of `Application` provides the database client instance.
+```java
+public class WikipediaApp extends Application {
+
+   ...
+
+   public <T> DatabaseClient<T> getDatabaseClient(Class<T> cls) {
+        if (!databaseClients.containsKey(cls)) {
+            DatabaseClient<?> client;
+            if (cls.equals(HistoryEntry.class)) {
+                client = new DatabaseClient<>(this, HistoryEntry.DATABASE_TABLE);
+
+   ...
+
+}
+```
+
+---
+
+`DatabaseClient` holds references to instances of `ContentProviderClient` and `DatabaseTable`, both Android SDK classes.
+```java
+public class DatabaseClient<T> {
+    @NonNull private final ContentProviderClient client;
+    @NonNull private final DatabaseTable<T> databaseTable;
+```
+
+```java
+public class ContentProviderClient {
+    public @Nullable Cursor query(@NonNull Uri url, @Nullable String[] projection,
+            @Nullable String selection, @Nullable String[] selectionArgs,
+            @Nullable String sortOrder) throws RemoteException {
+        return query(url, projection, selection,  selectionArgs, sortOrder, null);
+    }
+}
+```
+
+
+---
+# Reading lists, summarized
+
+[TODO: insert image tracing our path through code]
+
+
+---
+# How does the app efficiently load nearby points of interest in the map view?
 
 TODO
 
 
+---
+# How do we test this?
+
+
+---
+# So what did we learn about Android development today?
+
+- Android's flavor of MVC
+
+- How to use an Adapter as an inner class
+
+- How to use `RecyclerView` effectively to make an efficient view for a stream of data (`FeedView`)
+
+- How to make a HTTP request (via OkHttp and Retrofit)
+
+- How to manage multiple HTTP request streams to an API
+
+- How to persist data to a SQLite database (`Database`)
+
+- How to use Butterknife
+
+- How to use Espresso and Mockito (TODO)
+
+- How to use Fresco for efficient image memory management (TODO)
+
+
+???
+
+Emphasize use of third-party libraries. One-size-fits-all approach to many different libraries.
+
+
+
+
+---
+# Using Gradle for a different kind of developer productivity
 
 
 
