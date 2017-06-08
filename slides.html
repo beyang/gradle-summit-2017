@@ -74,7 +74,9 @@ by creating a dialogue between you and the code.
 
 "Good artists copy. Great artists steal." —Picasso
 
-"Good programmers copy. Great programmers copy and paste." —Beyang
+--
+
+"Good programmers copy. Great programmers copy and paste." —me
 
 ???
 
@@ -89,15 +91,19 @@ only refer back to the slides if they get lost).
 
 A "medium-size" app.
 
-* 827 Java files
+* 738 Java files
 
-* 100,225 lines of code
+* 69,257 lines of code
 
-* 5,376 commits over 4 years
+* 2,544 lines of comments
+
+* [TODO: insert number] classes and methods with no docstring
+
+* 5,378 commits over 4 years
 
 If the Wikipedia Android app were a book, it'd be half the length of *Moby Dick* or just under the average length of a *Harry Potter* book.<sup>*</sup>
 
-.footer[\* Assuming 1 word == 1 LoC]
+.footer[\* Assuming 1 LoC == 1.5 words]
 
 --
 
@@ -116,12 +122,14 @@ If the Wikipedia Android app were a book, it'd be half the length of *Moby Dick*
 - Resources: static assets
 
 ---
-# How do you dive into a new codebase?
+## How do you dive into a new codebase?
 
 Good approaches:
 
 * Read the docs
+
 * Fix a bug
+
 * Get a tutorial from a coworker
 
 Bad approaches that sound good:
@@ -557,35 +565,164 @@ public class ContentProviderClient {
 
 
 ---
-# How does the app efficiently load nearby points of interest in the map view?
+# How do you load nearby POI in a map?
 
-TODO
+Let's take a look at the `NearbyFragment`,
+```java
+public class NearbyFragment extends Fragment {
+    ...
+    @BindView(R.id.mapview) MapView mapView;
+```
+
+which conveniently has an `initializeMap` method.
+```java
+    private void initializeMap() {
+        mapView.getMapAsync(new OnMapReadyCallback() {
+            @Override
+            public void onMapReady(@NonNull MapboxMap mapboxMap) {
+                NearbyFragment.this.mapboxMap = mapboxMap;
+
+                enableUserLocationMarker();
+                mapboxMap.getTrackingSettings().setMyLocationTrackingMode(MyLocationTracking.TRACKING_NONE);
+
+                mapboxMap.setOnScrollListener(new MapboxMap.OnScrollListener() {
+                    @Override
+                    public void onScroll() {
+                        fetchNearbyPages();
+                    }
+                });
+```
+
+---
+
+`initializeMap` calls `fetchNearbyPages`,
+```java
+    private void fetchNearbyPages() {
+        final int fetchTaskDelayMillis = 500;
+        mapView.removeCallbacks(fetchTaskRunnable);
+        mapView.postDelayed(fetchTaskRunnable, fetchTaskDelayMillis);
+    }
+```
+and this invokes `fetchTaskRunnable`.
+
+---
+
+This, in turn, runs `client.request(...)` in the background, where `client` is an instance of `NearbyClient`.
+```java
+    private Runnable fetchTaskRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (!isResumed() || mapboxMap == null) {
+                return;
+            }
+
+            onLoading();
+
+            WikiSite wiki = WikipediaApp.getInstance().getWikiSite();
+            client.request(wiki, mapboxMap.getCameraPosition().target.getLatitude(),
+                    mapboxMap.getCameraPosition().target.getLongitude(), getMapRadius(),
+                    new NearbyClient.Callback() {
+                        @Override public void success(@NonNull Call<MwQueryResponse<Nearby>> call,
+                                                      @NonNull NearbyResult result) {
+                            if (!isResumed()) {
+                                return;
+                            }
+                            lastResult = result;
+                            showNearbyPages(result);
+                            onLoaded();
+                        }
+```
+
+---
+
+`NearbyClient` wraps an instance of `MwCachedService`,
+```java
+class NearbyClient {
+    ...
+    @NonNull private final WikiCachedService<Service> cachedService = new MwCachedService<>(Service.class);
+
+    public Call<MwQueryResponse<Nearby>> request(@NonNull WikiSite wiki, double latitude,
+                                                 double longitude, double radius,
+                                                 @NonNull Callback cb) {
+        return request(wiki, cachedService.service(wiki), latitude, longitude, radius, cb);
+    }
+}
+```
+
+which returns an instance of `Retrofit`,
+```java
+public class MwCachedService<T> extends WikiCachedService<T> {
+    public MwCachedService(@NonNull Class<T> clazz) {
+        super(clazz);
+    }
+
+    @NonNull @Override protected Retrofit create() {
+        return RetrofitFactory.newInstance(wiki());
+    }
+}
+```
+
+---
+
+which is constructed by a `RetrofitFactory` instance.
+```java
+public final class RetrofitFactory {
+    public static Retrofit newInstance(@NonNull WikiSite wiki) {
+        return newInstance(wiki.url() + "/", wiki);
+    }
+
+    public static Retrofit newInstance(@NonNull String endpoint, @NonNull WikiSite wiki) {
+        return new Retrofit.Builder()
+                .client(OkHttpConnectionFactory.getClient().newBuilder()
+                        .addInterceptor(new LanguageVariantHeaderInterceptor(wiki)).build())
+                .baseUrl(endpoint)
+                .addConverterFactory(GsonConverterFactory.create(GsonUtil.getDefaultGson()))
+                .build();
+    }
+```
+This is a great example of use of the popular `Retrofit` library in the wild.
 
 
 ---
-# How do we test this?
+# How do we test the backend client?
+
+`NearbyClientTest` uses Mockito to mock backend API endpoints.
+
+```java
+public class NearbyClientTest extends MockWebServerTest {
+    @NonNull private final NearbyClient subject = new NearbyClient();
+
+    @Test public void testRequestSuccessHasResults() throws Throwable {
+        enqueueFromFile("nearby.json");
+
+        NearbyClient.Callback cb = mock(NearbyClient.Callback.class);
+        Call<MwQueryResponse<Nearby>> call = request(cb);
+
+        server().takeRequest();
+        assertCallbackSuccess(call, cb);
+    }
+```
+([source](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/test/java/org/wikipedia/nearby/NearbyClientTest.java?q=onData#L26:14-26:30))
 
 
 ---
-# So what did we learn about Android development today?
+# So what did we learn in this talk today, Beyang?
 
-- Android's flavor of MVC
-
-- How to use an Adapter as an inner class
+- How to use an Adapter that's an inner class
 
 - How to use `RecyclerView` effectively to make an efficient view for a stream of data (`FeedView`)
 
-- How to make a HTTP request (via OkHttp and Retrofit)
-
-- How to manage multiple HTTP request streams to an API
-
 - How to persist data to a SQLite database (`Database`)
+
+- How to use OkHttp and Retrofit to manage HTTP API requests
 
 - How to use Butterknife
 
-- How to use Espresso and Mockito (TODO)
+- How to use Mockito to mock HTTP client classes
 
 - How to use Fresco for efficient image memory management (TODO)
+
+- Built intuition about Android's flavor of MVC
 
 
 ???
@@ -593,20 +730,33 @@ TODO
 Emphasize use of third-party libraries. One-size-fits-all approach to many different libraries.
 
 
+---
+# Using Gradle for developer productivity
+
+* Understanding code efficiently requires good tools
+
+* Tools that make clear the underlying structure of the code and get out of the way
+
+* Dependency graph is a key part of code structure
+
+* Gradle defines that graph. Our tools must extract it from Gradle files.
+
+TODO: how much of Java language server to open-source before Gradle Summit?
 
 
 ---
-# Using Gradle for a different kind of developer productivity
+# Language Server Protocol
 
 
 
-
-
----
-# The code reading tool we built
 
 ---
 # Java language server
+
+[TODO: image of Java language server]
+
+
+
 
 ???
 
