@@ -177,11 +177,11 @@ they do do it, they don't do the way most people would assume they do.
 * It's fun
 
 ???
-"A branching, dialectic process"
+"A branching, dialectic process that produces an artifact for reference later or by others"
 "The Sourcegraph Way"
 
 ---
-### The "icebreaker"
+### "Icebreaker" questions
 
 1. Where's your "main" function?
 
@@ -192,7 +192,7 @@ they do do it, they don't do the way most people would assume they do.
 ---
 ### Wikipedia App
 
-1\. Where's the "main" function?
+1\. Where's your "main" function?
 ```java
 public class MainActivity {
   public void onCreate(Bundle savedInstanceState) {
@@ -203,7 +203,7 @@ public class MainActivity {
 ([source](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/main/MainActivity.java#L13:14-13:26))
 
 ---
-2\. How does it arrive at its initial state?
+2\. How do we arrive at our initial state?
 
 Android SDK relies on inheritance, so look at class hierarchy:
 
@@ -346,7 +346,7 @@ public class FeedFragment extends Fragment implements BackPressedHandler {
 ---
 # How does FeedView work?
 
-Great use of the `RecyclerView` ("A flexible view for providing a limited window into a large data set.") in the Android SDK.
+`FeedView` is a great example of using the SDK's `RecyclerView` ("a flexible view for providing a limited window into a large data set").
 
 The
 [documentation](https://developer.android.com/reference/android/support/v7/widget/RecyclerView.html) is
@@ -355,7 +355,7 @@ The
 ---
 # How does FeedView work (initialization)?
 
-The fragment wires up the view to adapter, callback, and scrollback listener
+The fragment `FeedFragment` wires up the view to adapter, callback, and scrollback listener.
 ```java
 @Nullable @Override public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
 
@@ -367,17 +367,18 @@ The fragment wires up the view to adapter, callback, and scrollback listener
         feedView.addOnScrollListener(feedScrollListener);
 }
 ```
+([source](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@5ed559f1e05e6e3379a427c49d52578a06b454d7/-/blob/app/src/main/java/org/wikipedia/feed/FeedFragment.java#L97-101))
 
 ---
 # How does the feed create new cards?
 
-By [`FeedAdapter.onCreateViewHolder`](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/view/FeedAdapter.java#L42:43-42:61):
+The feed creates new  [`FeedAdapter.onCreateViewHolder`](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/view/FeedAdapter.java#L42:43-42:61):
 ```java
     @Override public DefaultViewHolder<T> onCreateViewHolder(ViewGroup parent, int viewType) {
         return new DefaultViewHolder<>(newView(parent.getContext(), viewType));
     }
 ```
-which calls [`FeedAdapter.newView`](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/view/FeedAdapter.java#L85:24-85:31),
+which calls [`FeedAdapter.newView`](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/view/FeedAdapter.java#L85:24-85:31):
 which calls [`FeedAdapter.getItemViewType`](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/view/FeedAdapter.java#L77:26-77:41):
 ```java
     @Override public int getItemViewType(int position) {
@@ -706,7 +707,7 @@ public class NearbyClientTest extends MockWebServerTest {
 
 
 ---
-# So what did we learn in this talk today, Beyang?
+# What did we end up covering?
 
 - How to use an Adapter that's an inner class
 
@@ -729,41 +730,81 @@ public class NearbyClientTest extends MockWebServerTest {
 
 Emphasize use of third-party libraries. One-size-fits-all approach to many different libraries.
 
+---
+# TODO: recap of meta-technique just used...
+
+
+
+
+
+
+
+
 
 ---
-# Using Gradle for developer productivity
+# Code intelligence and code understanding
 
-* Understanding code efficiently requires good tools
+**Code Intelligence** is the set of auto-navigation and auto-generation primitives that use a semantic understanding of code to enable a human programmer to read and write source code efficiently.
 
-* Tools that make clear the underlying structure of the code and get out of the way
+Code Intelligence accelerates the process of understanding code.
 
-* Dependency graph is a key part of code structure
+???
 
-* Gradle defines that graph. Our tools must extract it from Gradle files.
+That's why almost everyone in the Java world uses an IDE, and people
+in language communities without good IDE support use plugins that
+provide jump-to-def, find-refs, etc.
 
-TODO: how much of Java language server to open-source before Gradle Summit?
+The day-to-day, hour-by-hour, minute-by-minute task of building your
+conceptual understanding.
 
 
+---
+# Code intelligence and Gradle
+
+* Proper code intelligence built on the graph of relationships in code
+
+* Gradle records dependency relationships
+
+
+<!--
 ---
 # Language Server Protocol
 
+* Open protocol for code intelligence provider (language servers) and code viewing programs (e.g., editors, Sourcegraph)
 
+Other links:
+* [langserver.org](http://langserver.org/)
+* [github.com/Microsoft/language-server-protocol](https://github.com/Microsoft/language-server-protocol)
+-->
+
+---
+# Parsing build files
+
+Global code intelligence requires parsing build files.
 
 
 ---
-# Java language server
+# Gradle and security
 
-[TODO: image of Java language server]
+Analyzing Gradle is tricky, because **arbitrary code execution**.
 
+What can Gradle plugin developers do?
 
+* Make Gradle scripts easier to statically analyze
+
+  * Obey conventions in usage of DSL.
+
+  * Expose safe, dynamic ways of exporing build metadata.
+
+  * Create a Gradle plugin that emits metadata in a standard format
+    run on a developer's machine and pushed upstream.
 
 
 ???
 
 TODO: credit Aaron Leung in slides
 
----
-# LSP
+TODO: how much of Java language server to open-source before Gradle Summit?
 
 
 ---
@@ -778,6 +819,11 @@ TODO: credit Aaron Leung in slides
 
 1. Favor simplicity over unnecessary fanciness
 
+
+---
+# Takeaways
+
+New process
 
 
 ---
