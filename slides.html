@@ -27,8 +27,155 @@
 
 class: center, middle
 
-# Learning Android by example,
-# the smart way
+# Become a better Android developer
+## with examples and patterns from open source
+
+
+---
+# About me
+
+* [@beyang](https://twitter.com/beyang)
+
+* CTO, [Sourcegraph](https://sourcegraph.com/)
+
+* Used to be a T.A.
+
+
+---
+
+<div style="height: 100%; position: absolute; top: 30%;">
+Good artists copy. Great artists steal.
+<br><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;—Picasso
+</div>
+
+---
+# What we're going to talk about
+
+* Three open-source Android apps and how they work
+
+* The process used to understand how they work
+
+* The tool we built with Gradle to accelerate that process
+
+???
+
+Give a man a fish, he'll eat for a day. Teach a man to fish, he'll eat
+for a lifetime. Tell the man how you made your high-performance
+fishing rod, and he can build a fishing empire.
+
+
+---
+# The graph of code
+
+[TODO: 2 images, 1 of toy graph, the other of a "real-world" graph with many nodes and edges]
+
+???
+
+* The graph of code is a powerful resource you can use to grow your
+  own programming talents.
+
+* Sourcegraph is a semantic index of all the Java code in the world
+  designed to make it easier to explore.
+
+* Most of what you do when you build a conceptual model of code
+  reduces to walking forward and backward along the graph of code.
+
+* Because Sourcegraph indexes all this code and interfaces with a lot
+  of members in the Java community (both inside companies and in open
+  source), we've seen a lot of patterns and anti-patterns for what
+  works well.
+
+* Here's a sampling of the knowledge that the graph contains, curated
+  using our experience indexing it.
+
+
+---
+# App #1: [Wikipedia](https://play.google.com/store/apps/details?id=org.wikipedia)
+
+<img src="images/feed.png" alt="Wikipedia app" style="width: 22%">
+<img src="images/feed.png" alt="Wikipedia app" style="width: 22%">
+<img src="images/feed.png" alt="Wikipedia app" style="width: 22%">
+<img src="images/feed.png" alt="Wikipedia app" style="width: 22%">
+
+[TODO: replace with different screenshots]
+
+---
+# App #1: [Wikipedia](https://play.google.com/store/apps/details?id=org.wikipedia)
+
+A medium-sized [open-source app](https://github.com/wikimedia/apps-android-wikipedia).
+
+* 738 Java files
+
+* 69,257 lines of code
+
+* 2,544 lines of comments
+
+* 9 out of 10 classes & methods have no docstring
+
+* 5,378 commits over 4 years
+
+If the Wikipedia app were a book, it'd be half the length of *Moby Dick*.<sup>*</sup>
+
+.footer[\* Assuming 1 LoC == 1.5 words]
+
+--
+
+## *Where are the Spark Notes?*
+
+???
+
+IMPORTANT: At this point, ask everyone to pull out their Android
+phones, download the Wikipedia app and visit the slides link to follow
+along. Make people follow along. Point out that the links to source
+code should be followed, and folks should stay in the source code (and
+only refer back to the slides if they get lost).
+
+
+
+
+
+---
+<br><br><br><center>- 30 -</center>
+
+
+
+
+
+
+
+---
+# Tools drive process
+
+---
+# How our tool (Sourcegraph) works
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+# Appendix
+
+
+
 
 ---
 # Agenda
@@ -52,7 +199,9 @@ much easier and more powerful.
 ---
 # About me
 
-Was a T.A. in college (started with iOS development)
+Creator of Sourcegraph
+
+T.A. in college (including for a mobile app development class)
 
 TODO: more
 
@@ -89,7 +238,7 @@ only refer back to the slides if they get lost).
 ---
 ## Wikipedia App
 
-A "medium-size" app.
+A medium-sized app.
 
 * 738 Java files
 
