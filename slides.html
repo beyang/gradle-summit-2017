@@ -20,6 +20,9 @@
           left: 20px;
           font-size: 12pt;
       }
+      img {
+          max-width: 100%;
+      }
     </style>
   </head>
   <body>
@@ -52,17 +55,28 @@ Good artists copy. Great artists steal.
 ---
 # What we're going to talk about
 
-* Three open-source Android apps and how they work
+* Three open-source Android apps and how they work, including how they
 
-* The process used to understand how they work
+    * Use the model-view-adapter pattern
+    * Efficiently load and display large feeds of data
+    * Persist data to a SQLite database
+    * Use common third-party libraries to make HTTP API requests and
+      bind view data to the underlying model
+    * Unit test
+    * Manage memory of large data items (images) efficiently
 
-* The tool we built with Gradle to accelerate that process
+* A process you can use to efficiently understand how other apps work
+
+* (Briefly) The tool we built with Gradle to accelerate this process
 
 ???
 
-Give a man a fish, he'll eat for a day. Teach a man to fish, he'll eat
-for a lifetime. Tell the man how you made your high-performance
-fishing rod, and he can build a fishing empire.
+Whirlwind tour of how to Android with examples from open source. The
+goal is not that you understand how each and every example works, but
+that you know there exists an example and can use these slides later
+as a reference. What should you immediately take away from this talk?
+A process for leveraging open source to boost how much code you've
+seen.
 
 
 ---
@@ -93,12 +107,10 @@ fishing rod, and he can build a fishing empire.
 ---
 # App #1: [Wikipedia](https://play.google.com/store/apps/details?id=org.wikipedia)
 
-<img src="images/feed.png" alt="Wikipedia app" style="width: 22%">
-<img src="images/feed.png" alt="Wikipedia app" style="width: 22%">
-<img src="images/feed.png" alt="Wikipedia app" style="width: 22%">
-<img src="images/feed.png" alt="Wikipedia app" style="width: 22%">
-
-[TODO: replace with different screenshots]
+<img src="images/feed.png" alt="Wikipedia app" style="width: 23%">
+<img src="images/lists.png" alt="Wikipedia app" style="width: 23%">
+<img src="images/history.png" alt="Wikipedia app" style="width: 23%">
+<img src="images/nearby.png" alt="Wikipedia app" style="width: 23%">
 
 ---
 # App #1: [Wikipedia](https://play.google.com/store/apps/details?id=org.wikipedia)
@@ -130,6 +142,245 @@ phones, download the Wikipedia app and visit the slides link to follow
 along. Make people follow along. Point out that the links to source
 code should be followed, and folks should stay in the source code (and
 only refer back to the slides if they get lost).
+
+---
+# Ways to dive into code
+
+Good approaches:
+
+* Read the docs
+
+* Fix a bug
+
+* Get a tutorial from a coworker
+
+Bad approach:
+
+* Try to read the code
+
+
+---
+# Problems with reading code
+
+A codebase is like a dictionary.
+
+* A bunch of definitions
+
+* Definitions reference one another
+
+* No obvious place to start
+
+* No obvious narrative arc
+
+* Don't want to read the whole thing
+
+So reading it is **boring**.
+
+
+---
+# Turn it into a conversation
+
+### The Conversation Method for Reading Code
+
+1. Ask an interesting question
+
+2. Find the answer
+
+3. Ask another question
+
+???
+
+Many ways to read and understand code. This is just one way. It has
+worked well for me as a professional programmer and worked well for me
+in teaching students as a T.A.
+
+
+--
+
+### Some icebreakers:
+
+1. Where's your "main" function?
+
+1. How do you arrive at your initial state?
+
+1. What options do you present to the user from there?
+
+???
+
+Just like a conversation with a person, there are a few standard
+"icebreakers" you can use to get the conversation rolling.
+
+
+---
+### Wikipedia, where's your "main" function?
+
+???
+
+* Any Android developer knows that Android apps are built around
+  "activities."
+
+* Main activity is called `MainActivity`. The initializer method for
+  an `Activity` instance is `onCreate`, so let's start there.
+
+
+--
+
+[![symbol search for "activity"](images/search_activity.png)](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/main/MainActivity.java#L13:14-13:26)
+
+--
+
+Looking for:
+
+```java
+public class MainActivity {
+  public void onCreate(Bundle savedInstanceState) {
+    ...
+  }
+}
+```
+([source](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/main/MainActivity.java#L13:14-13:26))
+
+
+---
+### Wikipedia, how do you arrive at your initial state?
+
+`MainActivity` itself doesn't tell us, but it's a subclass, so let's
+walk up its inheritance tree
+([source](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/main/MainActivity.java#L21:29-21:40)):
+
+* `MainActivity`
+```java
+public class MainActivity extends SingleFragmentToolbarActivity<MainFragment>
+```
+* *inherits* `SingleFragmentToolbarActivity`
+* *inherits* `SingleFragmentActivity`
+* *contains* `SingleFragmentActivity.onCreate`
+```java
+            addFragment(createFragment());
+```
+* *calls* `MainActivity.createFragment`
+```java
+        return MainFragment.newInstance();
+```
+* *calls* `MainFragment.newInstance`
+* *initialized with* `MainFragment.onCreateView`
+
+???
+
+TODO: turn all these into links to Sourcegraph
+
+
+---
+### What about the initial navbar?
+
+```java
+void MainActivity::onCreate(Bundle savedInstanceState)
+➜ MainFragment MainActivity::createFragment()
+  ➜ MainFragment MainFragment::newInstance()
+    ➜ new MainFragment()
+	  ➜ View MainFragment::onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
+```
+
+```java
+View MainFragment::onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
+➜ R.layout.fragment_main
+  ➜ NavTabLayout.setTabViews
+    ➜ NavTab implements EnumCode
+      ➜ FeedFragment.newInstance()
+```
+
+[Butterknife](https://github.com/JakeWharton/butterknife) is used
+to
+[bind view to fragment](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/main/MainFragment.java#L106:32-106:36).
+
+[TODO: add more code snippets here]
+
+
+---
+### What can the user do from here?
+
+<img src="images/navbar.png" style="width: 35%;">
+
+---
+### What can the user do from here?
+
+```java
+public enum NavTab implements EnumCode {
+    EXPLORE(R.string.nav_item_feed, R.drawable.ic_globe) {
+        @NonNull @Override public Fragment newInstance() {
+            return FeedFragment.newInstance();
+        }
+    },
+    READING_LISTS(R.string.nav_item_reading_lists, R.drawable.ic_bookmark_white_24dp) {
+        @NonNull @Override public Fragment newInstance() {
+            return ReadingListsFragment.newInstance();
+        }
+    },
+    HISTORY(R.string.nav_item_history, R.drawable.ic_restore_black_24dp) {
+        @NonNull @Override public Fragment newInstance() {
+            return HistoryFragment.newInstance();
+        }
+    },
+    NEARBY(R.string.nav_item_nearby, R.drawable.ic_explore_black_24dp) {
+        @NonNull @Override public Fragment newInstance() {
+            return NearbyFragment.newInstance();
+        }
+    };
+
+    ...
+}
+```
+
+
+---
+# Overall application structure
+
+Backbone classes in the Wikipedia app:
+
+* `MainActivity`
+* `MainFragment`
+* `FeedFragment`
+* `HistoryFragment`
+* `NearbyFragment`
+* `ReadingListsFragment`
+
+???
+
+Now you have a picture of the app in broad strokes.
+
+
+---
+# Let's continue the conversation
+
+What might be of interest?
+
+1. What does that `EnumCode` class do?
+
+1. How does the feed work? Are there any clever performance hacks? How
+   does pull-down refresh work?
+
+1. How are reading lists stored persistently?
+
+1. How does the app load nearby points of interest in the map view?
+   How does it do so without blocking? How does it do so efficiently?
+
+1. How is this app tested?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
