@@ -78,14 +78,6 @@ as a reference. What should you immediately take away from this talk?
 A process for leveraging open source to boost how much code you've
 seen.
 
-
----
-# The graph of code
-
-[TODO: 2 images, 1 of toy graph, the other of a "real-world" graph with many nodes and edges]
-
-???
-
 * The graph of code is a powerful resource you can use to grow your
   own programming talents.
 
@@ -180,9 +172,7 @@ So reading it is **boring**.
 ---
 # Turn it into a conversation
 
-### The Conversation Method for Reading Code
-
-1. Ask an interesting question
+1. Ask a question of interest
 
 2. Find the answer
 
@@ -225,10 +215,6 @@ Just like a conversation with a person, there are a few standard
 
 --
 
-[![symbol search for "activity"](images/search_activity.png)](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/main/MainActivity.java#L13:14-13:26)
-
---
-
 Looking for:
 
 ```java
@@ -238,7 +224,15 @@ public class MainActivity {
   }
 }
 ```
+
+--
+
+Search for the main activity:
+
+[![symbol search for "activity"](images/search_activity.png)](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/main/MainActivity.java#L13:14-13:26)
+
 ([source](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/main/MainActivity.java#L13:14-13:26))
+
 
 
 ---
@@ -267,42 +261,77 @@ public class MainActivity extends SingleFragmentToolbarActivity<MainFragment>
 
 ???
 
-TODO: turn all these into links to Sourcegraph
+TODO: hyperlinks to code on Sourcegraph
 
 
 ---
-### What about the initial navbar?
+### Wikipedia, how do you arrive at your initial state? (continued)
 
+* `MainFragment.onCreateView`
 ```java
-void MainActivity::onCreate(Bundle savedInstanceState)
-➜ MainFragment MainActivity::createFragment()
-  ➜ MainFragment MainFragment::newInstance()
-    ➜ new MainFragment()
-	  ➜ View MainFragment::onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
+        View view = inflater.inflate(R.layout.fragment_main, container, false);
+        unbinder = ButterKnife.bind(this, view);
 ```
-
+* *references* `resources/fragment_main.xml`
+```xml
+        <org.wikipedia.navtab.NavTabLayout
+```
+* *references* `NavTabLayout`
 ```java
-View MainFragment::onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
-➜ R.layout.fragment_main
-  ➜ NavTabLayout.setTabViews
-    ➜ NavTab implements EnumCode
-      ➜ FeedFragment.newInstance()
+    private void setTabViews() {
+        for (int i = 0; i < NavTab.size(); i++) {
+            NavTab navTab = NavTab.of(i);
+            getMenu().add(Menu.NONE, i, i, navTab.text()).setIcon(navTab.icon());
+        }
 ```
+* *calls* `NavTab.of`
+* *references* `NavTab.EXPLORE`
+* *references* `FeedFragment.newInstance`
 
-[Butterknife](https://github.com/JakeWharton/butterknife) is used
+
+---
+
+Note the use
+of [Butterknife](https://github.com/JakeWharton/butterknife)
 to
-[bind view to fragment](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/main/MainFragment.java#L106:32-106:36).
+[bind view objects to fields in the fragments](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/main/MainFragment.java#L106:32-106:36).
 
-[TODO: add more code snippets here]
+```java
+public class MainFragment extends Fragment implements BackPressedHandler, FeedFragment.Callback,
+        NearbyFragment.Callback, HistoryFragment.Callback, SearchFragment.Callback,
+        LinkPreviewDialog.Callback {
+    ...
+    @BindView(R.id.fragment_main_view_pager) ViewPager viewPager;
+    @BindView(R.id.fragment_main_nav_tab_layout) NavTabLayout tabLayout;
+    private Unbinder unbinder;
+
+    ...
+    
+    @Nullable @Override public View onCreateView(LayoutInflater inflater,
+                                                 @Nullable ViewGroup container,
+                                                 @Nullable Bundle savedInstanceState) {
+        ...
+        unbinder = ButterKnife.bind(this, view);
+        ...
+    }
+
+    ...
+
+    @Override public void onDestroyView() {
+        unbinder.unbind();
+        unbinder = null;
+        super.onDestroyView();
+    }
+
+    ...
+}
+```
 
 
 ---
 ### What can the user do from here?
 
-<img src="images/navbar.png" style="width: 35%;">
-
----
-### What can the user do from here?
+The `NavTab` class outlines exactly what the user's options are:
 
 ```java
 public enum NavTab implements EnumCode {
@@ -331,11 +360,51 @@ public enum NavTab implements EnumCode {
 }
 ```
 
+---
+### What can the user do from here?
+
+And these map clearly onto what's present in the UI:
+
+<img src="images/navbar.png" style="width: 35%;">
+
+
+---
+### Side note: EnumCode for checked conversion of ints to enums
+
+```java
+public interface EnumCode {
+    int code();
+}
+```
+```java
+public enum HttpStatus implements EnumCode {
+
+    SYNCHRONIZED(0),
+
+    OUTDATED(1),
+
+    MODIFIED(2),
+
+    ...
+    
+    private static final EnumCodeMap<HttpStatus> MAP = new EnumCodeMap<>(HttpStatus.class);
+
+    private final int code;
+
+    @NonNull
+    public static HttpStatus of(int code) {
+        return MAP.get(code);
+    }
+
+    ...
+```
+([source](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/database/http/HttpStatus.java#L9:35-9:43))
+
 
 ---
 # Overall application structure
 
-Backbone classes in the Wikipedia app:
+We now know what the backbone classes are in the Wikipedia app:
 
 * `MainActivity`
 * `MainFragment`
@@ -352,12 +421,20 @@ Now you have a picture of the app in broad strokes.
 ---
 # Let's continue the conversation
 
-What might be of interest?
+1. How does the feed work?
 
-1. What does that `EnumCode` class do?
+1. How do the reading lists work?
 
-1. How does the feed work? Are there any clever performance hacks? How
-   does pull-down refresh work?
+1. How does the map work?
+
+1. How is this app tested?
+
+???
+
+1. How does the feed work?
+
+    *  Are there any clever performance hacks? How does pull-down
+       refresh work?
 
 1. How are reading lists stored persistently?
 
@@ -367,354 +444,21 @@ What might be of interest?
 1. How is this app tested?
 
 
+---
+### How does the feed work?
 
+<center><img src="images/feed.png" style="width: 25%"></center>
 
+* How does it load and display cards efficiently?
 
+* How does it fetch data from the server?
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+* How do I get "pull-down-to-refresh"?
 
 ---
-<br><br><br><center>- 30 -</center>
+### How does the feed work?
 
-
-
-
-
-
-
----
-# Tools drive process
-
----
-# How our tool (Sourcegraph) works
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
----
-# Appendix
-
-
-
-
----
-# Agenda
-
-1. Intro
-
-1. Wikipedia
-
-1. DuckDuckGo
-
-1. PocketHub
-
-1. Analysis
-
-???
-
-This talk is a technique to teach yourself and others a new Android
-codebase and a Gradle-enabled tool we built to make that technique
-much easier and more powerful.
-
----
-# About me
-
-Creator of Sourcegraph
-
-T.A. in college (including for a mobile app development class)
-
-TODO: more
-
-???
-
-Being a T.A. made me think a lot about how to introduce people to new
-codebases, both because this was a problem facing students, but even
-more so because this is a problem facing every T.A. Every new
-assignment, you have 10-12 coding projects to look through. Without a
-framework in place, it can be easy to lose track, lose focus, and
-spend a lot of time without really gaining a good understanding of the
-codebase.
-
-Code is hard to read, because there's no narrative arc. So, invent one
-by creating a dialogue between you and the code.
-
----
-# Intro
-
-"Good artists copy. Great artists steal." —Picasso
-
---
-
-"Good programmers copy. Great programmers copy and paste." —me
-
-???
-
-IMPORTANT: At this point, ask everyone to pull out their Android
-phones, download the Wikipedia app and visit the slides link to follow
-along. Make people follow along. Point out that the links to source
-code should be followed, and folks should stay in the source code (and
-only refer back to the slides if they get lost).
-
----
-## Wikipedia App
-
-A medium-sized app.
-
-* 738 Java files
-
-* 69,257 lines of code
-
-* 2,544 lines of comments
-
-* [TODO: insert number] classes and methods with no docstring
-
-* 5,378 commits over 4 years
-
-If the Wikipedia Android app were a book, it'd be half the length of *Moby Dick* or just under the average length of a *Harry Potter* book.<sup>*</sup>
-
-.footer[\* Assuming 1 LoC == 1.5 words]
-
---
-
-<h2>Spark notes, anyone?</h2>
-
----
-## Android development 101
-
-(TODO: have a diagram here)
-
-- `View`: What the user sees. Often defined as XML with some Java logic bound to it.
-- `Activity`: The "controller"
-- `Fragment`
-- `Adapter`
-- SQLite
-- Resources: static assets
-
----
-## How do you dive into a new codebase?
-
-Good approaches:
-
-* Read the docs
-
-* Fix a bug
-
-* Get a tutorial from a coworker
-
-Bad approaches that sound good:
-
-* "Read" the source code
-
-???
-The good approaches all work, but have their issues.
-
-* Reading the docs is a good way to get a high-level overview, but the
-docs are often out of date, and they are disconnected from the
-on-the-ground effort of working with the code.  They're like reading a
-book about building a radio, as opposed to actually doing it.
-
-* Fixing a bug is the other
-end of the spectrum. You focus on a very specific problem with a clear definition of success. You can't skimp
-on understanding. You have to understand the issue through and through. But at the end, you have a deep, but
-narrow slice of the big picture. Indeed, many developers often go many months or even years with working
-knowledge of only a small subsection of their codebase.
-
-* Often, the best way to spin up on a piece of code is to have a
-conversation with a coworker who wrote or maintains it. But that has
-it's own issues: you only get a limited amount of time with that
-person and helping you means they can't get work done.
-
-Often the only solution is time. The more time you spend developing on
-a codebase, the better you will understand it. But is there a way to
-shortcut this? To get a high-level overview of a codebase that you
-otherwise might not obtain until months into the job? That's both
-valuable in the long run (if you want to become a tech lead or senior
-developer) and good for immediate working knowledge?
-
-The bad approach sounds good, and a lot of people will tell you to do
-it, but in my experience, most of the best programmers I've worked
-with don't actually do it too much, outside of code review. And when
-they do do it, they don't do the way most people would assume they do.
-
----
-## Have a conversation with your code
-
-* Eliminates analysis paralysis
-
-* Gives you "working model" of entire codebase (note: doesn't have to be 100% complete or even accurate)
-
-* It's fun
-
-???
-"A branching, dialectic process that produces an artifact for reference later or by others"
-"The Sourcegraph Way"
-
----
-### "Icebreaker" questions
-
-1. Where's your "main" function?
-
-1. How do you arrive at your initial state?
-
-1. What options do you present to the user from there?
-
----
-### Wikipedia App
-
-1\. Where's your "main" function?
-```java
-public class MainActivity {
-  public void onCreate(Bundle savedInstanceState) {
-    ...
-  }
-}
-```
-([source](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/main/MainActivity.java#L13:14-13:26))
-
----
-2\. How do we arrive at our initial state?
-
-Android SDK relies on inheritance, so look at class hierarchy:
-
-```java
-class org.wikipedia.MainActivity
-	extends SingleFragmentToolbarActivity<MainFragment>
-	extends SingleFragmentActivity<T extends Fragment>
-	extends ThemedActionBarActivity
-	extends BaseActivity
-	extends AppCompatActivity;
-```
-([source](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/main/MainActivity.java#L21:29-21:40))
-
-`AppCompatActivity` documentation:
-
-> Base class for activities that use the support library action bar features.
-
-[TODO: image of NavBar UI]
-
----
-2b\. How does the initial navbar item (the news feed) get displayed?
-
-```java
-void MainActivity::onCreate(Bundle savedInstanceState)
-➜ MainFragment MainActivity::createFragment()
-  ➜ MainFragment MainFragment::newInstance()
-    ➜ new MainFragment()
-	  ➜ View MainFragment::onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
-```
-
-```java
-View MainFragment::onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
-➜ R.layout.fragment_main
-  ➜ NavTabLayout.setTabViews
-    ➜ NavTab implements EnumCode
-      ➜ FeedFragment.newInstance()
-```
-
-[Butterknife](https://github.com/JakeWharton/butterknife) is used
-to
-[bind view to fragment](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/main/MainFragment.java#L106:32-106:36).
-
-[TODO: add more code snippets here]
-
----
-3\. What are the options for the user from here?
-
-```java
-public enum NavTab implements EnumCode {
-    EXPLORE(R.string.nav_item_feed, R.drawable.ic_globe) {
-        @NonNull @Override public Fragment newInstance() {
-            return FeedFragment.newInstance();
-        }
-    },
-    READING_LISTS(R.string.nav_item_reading_lists, R.drawable.ic_bookmark_white_24dp) {
-        @NonNull @Override public Fragment newInstance() {
-            return ReadingListsFragment.newInstance();
-        }
-    },
-    HISTORY(R.string.nav_item_history, R.drawable.ic_restore_black_24dp) {
-        @NonNull @Override public Fragment newInstance() {
-            return HistoryFragment.newInstance();
-        }
-    },
-    NEARBY(R.string.nav_item_nearby, R.drawable.ic_explore_black_24dp) {
-        @NonNull @Override public Fragment newInstance() {
-            return NearbyFragment.newInstance();
-        }
-    };
-
-    ...
-}
-```
-
-[TODO: add image of app, highlighting 4 tab options]
-
----
-# Now what?
-
-Choose your adventure:
-
-1. How does the feed work?
-
-   * Are there any clever frontend performance techniques?
-
-   * Any clever techniques for fetching or caching data?
-
-   * How do I get the pull-down-to-refresh?
-   
-1. How are reading lists persisted?
-
-1. How does the app efficiently load nearby points of interest in the
-   map view?
-
-1. How is this app tested?
-
-???
-
-* Better to start with a user-facing feature as the root of the
-  question, rather than a vague question that purely has to do with
-  the code like "How does this app persist data?" If you're interested
-  in learning about data persistence, find an app feature that
-  requires data persistence and go from there.
-* And you must commit to an adventure. Don't try to go down all paths
-  at once.
-
-
----
-# How does the feed work?
-
-What state does `FeedFragment` keep and how is it initialized?
+`FeedFragment` holds references to models and views for the feed.
 
 ```java
 public class FeedFragment extends Fragment implements BackPressedHandler {
@@ -743,76 +487,229 @@ public class FeedFragment extends Fragment implements BackPressedHandler {
 ```
 ([source](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/FeedFragment.java#L44:14-44:26))
 
+
 ---
-# How does FeedView work?
+### How does the feed view work?
 
-`FeedView` is a great example of using the SDK's `RecyclerView` ("a flexible view for providing a limited window into a large data set").
+```java
+public class FeedFragment extends Fragment implements BackPressedHandler {
+    ...
+    @BindView(R.id.fragment_feed_feed) FeedView feedView;
+```
 
-The
+`FeedView` is a great example of using the SDK's `RecyclerView`, "a flexible view for providing a limited window into a large data set."
+
+```java
+public class FeedView extends AutoFitRecyclerView {
+    private StaggeredGridLayoutManager recyclerLayoutManager;
+    @Nullable private ItemTouchHelper itemTouchHelper;
+
+    public FeedView(Context context) {
+        super(context);
+        init();
+    }
+
+    public FeedView(Context context, AttributeSet attrs) {
+        super(context, attrs);
+        init();
+    }
+    ...
+```
+
+Side note: the `RecyclerView`
 [documentation](https://developer.android.com/reference/android/support/v7/widget/RecyclerView.html) is
 13,000 words long.
 
----
-# How does FeedView work (initialization)?
 
-The fragment `FeedFragment` wires up the view to adapter, callback, and scrollback listener.
+---
+### How do you initialize the feed view?
+
+`FeedFragment` wires up the view to adapter, callback, and scrollback listener.
 ```java
 @Nullable @Override public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-
         ...
-
         feedAdapter = new FeedAdapter<>(coordinator, feedCallback);
         feedView.setAdapter(feedAdapter);
         feedView.setCallback(feedCallback);
         feedView.addOnScrollListener(feedScrollListener);
 }
 ```
+
+The callbacks handle user-triggered events from the view.
+
+The adapter provides view lifecycle handler methods and view data provider methods.
+
 ([source](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@5ed559f1e05e6e3379a427c49d52578a06b454d7/-/blob/app/src/main/java/org/wikipedia/feed/FeedFragment.java#L97-101))
 
 ---
-# How does the feed create new cards?
+### Where are the card views created and updated?
 
-The feed creates new  [`FeedAdapter.onCreateViewHolder`](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/view/FeedAdapter.java#L42:43-42:61):
 ```java
+public class FeedAdapter<T extends View & FeedCardView<?>> extends DefaultRecyclerAdapter<Card, T> {
+
+    ...
+
     @Override public DefaultViewHolder<T> onCreateViewHolder(ViewGroup parent, int viewType) {
         return new DefaultViewHolder<>(newView(parent.getContext(), viewType));
     }
-```
-which calls [`FeedAdapter.newView`](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/view/FeedAdapter.java#L85:24-85:31):
-which calls [`FeedAdapter.getItemViewType`](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/view/FeedAdapter.java#L77:26-77:41):
-```java
-    @Override public int getItemViewType(int position) {
-        return item(position).type().code();
+
+    @Override public void onBindViewHolder(DefaultViewHolder<T> holder, int position) {
+        Card item = item(position);
+        T view = holder.getView();
+
+        if (coordinator.finished()
+                && position == getItemCount() - 1
+                && callback != null) {
+            callback.onRequestMore();
+        }
+
+        //noinspection unchecked
+        ((FeedCardView<Card>) view).setCard(item);
+
+        if (view instanceof OfflineCardView && position == 1) {
+            ((OfflineCardView) view).setTopPadding();
+        }
     }
 ```
-which calls [`DefaultRecyclerAdapter.item`](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/views/DefaultRecyclerAdapter.java#L21:17),
-which references an instance of a superclass of `FeedAdapter`,
-which [invokes the superclass constructor like this](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/view/FeedAdapter.java#L37-38):
-```java
-        super(coordinator.getCards());
-```
-which leads us to [`FeedCoordinatorBase`](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/FeedCoordinatorBase.java#L23:23-23:42).
 
 ---
-# How does FeedCoordinatorBase obtain the data to populate the cards?
+### How do you customize card appearance?
 
-* Find all references to [`FeedCoordinatorBase.cards`](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/FeedCoordinatorBase.java#L35:39-35:44).
-* The only additions to the `cards` array can be traced back to
-  the
-  [`FeedCoordinatorBase.more`](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/FeedCoordinatorBase.java#L72:17-72:21) method.
+Different card view classes, identified by enum backed by `EnumCode`:
 
-TODO: fill this in
+```java
+public enum CardType implements EnumCode {
+    SEARCH_BAR(0) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new SearchCardView(ctx);
+        }
+    },
+    CONTINUE_READING(1) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new ContinueReadingCardView(ctx);
+        }
+    },
+    BECAUSE_YOU_READ_LIST(2) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new BecauseYouReadCardView(ctx);
+        }
+    },
+    MOST_READ_LIST(3) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new MostReadCardView(ctx);
+        }
+    },
+    FEATURED_ARTICLE(4) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new FeaturedArticleCardView(ctx);
+        }
+    },
+```
+
+
+---
+### What is the "model" for a card?
+
+```java
+public class FeedAdapter<T extends View & FeedCardView<?>> extends DefaultRecyclerAdapter<Card, T> {
+    ...
+    @Override public void onBindViewHolder(DefaultViewHolder<T> holder, int position) {
+        Card item = item(position);
+```
+
+### Where does it come from?
+
+```java
+public abstract class DefaultRecyclerAdapter<T, V extends View> extends RecyclerView.Adapter<DefaultViewHolder<V>> {
+    protected T item(int position) {
+        return items.get(position);
+    }
+```
+
+```java
+    public FeedAdapter(@NonNull FeedCoordinatorBase coordinator, @Nullable Callback callback) {
+        super(coordinator.getCards());
+```
+
+```java
+    @NonNull private FeedCoordinatorBase coordinator;
+```
+
+
+---
+### Where does the model fetch the data from?
+
+```java
+public abstract class FeedCoordinatorBase {
+
+    ...
+
+    private void appendCard(@NonNull Card card) {
+        int progressPos = cards.indexOf(progressCard);
+        insertCard(card, progressPos >= 0 ? progressPos : cards.size());
+    }
+```
+
+```java
+    private class ClientRequestCallback implements FeedClient.Callback {
+        @Override public void success(@NonNull List<? extends Card> cardList) {
+            for (Card card : cardList) {
+                if (!isCardHidden(card)) {
+                    appendCard(card);
+                }
+            }
+            requestNextCard(wiki);
+        }
+```
+
+```java
+    private FeedClient.Callback callback = new ClientRequestCallback();
+```
+
+---
+
+```java
+    private void requestCard(@NonNull WikiSite wiki) {
+        if (pendingClients.isEmpty()) {
+            removeProgressCard();
+            return;
+        }
+        pendingClients.get(0).request(context, wiki, currentAge, callback);
+    }
+```
+
+```java
+public class AggregatedFeedContentClient implements FeedClient {
+
+    @Nullable private Call<AggregatedFeedContent> call;
+
+    @Override
+    public void request(@NonNull Context context, @NonNull WikiSite wiki, int age, @NonNull Callback cb) {
+        cancel();
+        UtcDate date = DateUtil.getUtcRequestDateFor(age);
+        String endpoint = String.format(Locale.ROOT, Prefs.getRestbaseUriFormat(), wiki.scheme(),
+                wiki.authority());
+        Retrofit retrofit = RetrofitFactory.newInstance(endpoint, wiki);
+        AggregatedFeedContentClient.Service service = retrofit.create(Service.class);
+        call = service.get(date.year(), date.month(), date.date());
+        call.enqueue(new CallbackAdapter(cb, wiki, age));
+    }
+```
 
 ???
 
-A common issue with table / list views on mobile is performance. How
-do you load only what's necessary to cut down on bandwidth needs and
-frontend lag?
+This is an example of the use of the Retrofit library.
 
 ---
-# How are reading lists displayed?
+### How do the reading lists work?
 
-Another `RecyclerView` pattern, with an inner-class adapter:
+<center><img src="images/lists.png" style="width: 33%"></center>
+
+
+---
+### How do the reading lists work?
+
+Similar to the feed, Via a `RecyclerView`. This time, adapter is an inner class.
 
 ```java
 public class ReadingListsFragment extends Fragment {
@@ -831,11 +728,10 @@ public class ReadingListsFragment extends Fragment {
     @Nullable private ActionMode actionMode;
 ```
 
-
 ---
-# How are reading lists persisted?
+### How are the reading lists persisted?
 
-Trace data from view to adapter back to model.
+`ReadingListAdapter` provides data to view by referencing model (`readingLists`).
 
 ```java
 private final class ReadingListAdapter extends RecyclerView.Adapter<ReadingListItemHolder> {
@@ -856,16 +752,17 @@ public class ReadingLists {
     }
 }
 ```
+
+???
+
 Let's find references to its `set` method.
 
 ---
 
-This callback sets the `lists` field in the model class. It fetches the data by calling `ReadingList.DAO.queryMruLists`,
+This callback sets the `lists` field in the model class.
 ```java
 public class ReadingListFragment extends Fragment implements ReadingListItemActionsDialog.Callback {
-
     ...
-
     private void updateReadingListData() {
         ReadingList.DAO.queryMruLists(null, new CallbackTask.DefaultCallback<List<ReadingList>>() {
             @Override public void success(List<ReadingList> lists) {
@@ -884,7 +781,7 @@ public class ReadingListFragment extends Fragment implements ReadingListItemActi
     }
 ```
 
-which is defined in `ReadingListData`.
+It invokes `ReadingListData.queryMruLists`.
 ```java
 public final class ReadingListData {
     ...
@@ -962,11 +859,19 @@ public class ContentProviderClient {
 ---
 # Reading lists, summarized
 
-[TODO: insert image tracing our path through code]
+???
+
+TODO: insert image showing control flow and other relationships among classes and methods
 
 
 ---
-# How do you load nearby POI in a map?
+# How does the map work?
+
+<center><img src="images/nearby.png" style="width: 33%"></center>
+
+
+---
+# How does the map work?
 
 Let's take a look at the `NearbyFragment`,
 ```java
@@ -1081,15 +986,22 @@ public final class RetrofitFactory {
                 .build();
     }
 ```
-This is a great example of use of the popular `Retrofit` library in the wild.
+
+???
+
+This is another good example of how to use `Retrofit` in the wild.
 
 
 ---
-# How do we test the backend client?
+### How do we test the backend client?
 
-`NearbyClientTest` uses Mockito to mock backend API endpoints.
+Use Mockito to mock backend API endpoints in API client tests:
 
 ```java
+import static org.mockito.Mockito.mock;
+
+...
+
 public class NearbyClientTest extends MockWebServerTest {
     @NonNull private final NearbyClient subject = new NearbyClient();
 
@@ -1107,9 +1019,21 @@ public class NearbyClientTest extends MockWebServerTest {
 
 
 ---
-# What did we end up covering?
+## Wikipedia, the SparkNotes
 
-- How to use an Adapter that's an inner class
+- `NavTab`-based app built around 4 main `Fragment` subclasses
+
+- Subclasses `RecyclerView` and `RecyclerView.Adapter` for efficient table-based views
+
+- Uses `MapView` for the map
+
+- Uses OkHttp and Retrofit for calls to Wikipedia API, Mockito to test this
+
+
+---
+## Provides real-life examples for
+
+- How to wire up a `NavTab`-based app.
 
 - How to use `RecyclerView` effectively to make an efficient view for a stream of data (`FeedView`)
 
@@ -1121,109 +1045,131 @@ public class NearbyClientTest extends MockWebServerTest {
 
 - How to use Mockito to mock HTTP client classes
 
-- How to use Fresco for efficient image memory management (TODO)
-
 - Built intuition about Android's flavor of MVC
 
 
 ???
 
-Emphasize use of third-party libraries. One-size-fits-all approach to many different libraries.
+We just covered a bunch of practical examples of this Android functionality.
 
----
-# TODO: recap of meta-technique just used...
+Not covered, but could be:
 
+- How to use Fresco for efficient image memory management (TODO)
 
-
-
-
-
-
+NOTE: emphasize use of third-party libraries. This method generalizes
+to understanding almost any codebase.
 
 
 ---
-# Code intelligence and code understanding
-
-**Code Intelligence** is the set of auto-navigation and auto-generation primitives that use a semantic understanding of code to enable a human programmer to read and write source code efficiently.
-
-Code Intelligence accelerates the process of understanding code.
+<br><br>
+<center>
+<h2>Process inspires tools.</h2>
+<h2>⬇ ⬆</h2>
+<h2>Tools drive adoption of process.</h2>
+</center>
 
 ???
 
-That's why almost everyone in the Java world uses an IDE, and people
-in language communities without good IDE support use plugins that
-provide jump-to-def, find-refs, etc.
-
-The day-to-day, hour-by-hour, minute-by-minute task of building your
-conceptual understanding.
+There's a feedback loop
 
 
 ---
-# Code intelligence and Gradle
+## Our code understanding process
 
-* Proper code intelligence built on the graph of relationships in code
+* is dialectic
 
-* Gradle records dependency relationships
+* feels conversational
 
+* is branching and backtracking
 
-<!--
----
-# Language Server Protocol
+### It requires a tool that
 
-* Open protocol for code intelligence provider (language servers) and code viewing programs (e.g., editors, Sourcegraph)
+* gives you the abilities necessary to answer your own questions
 
-Other links:
-* [langserver.org](http://langserver.org/)
-* [github.com/Microsoft/language-server-protocol](https://github.com/Microsoft/language-server-protocol)
--->
+* is low mental overhead
 
----
-# Parsing build files
-
-Global code intelligence requires parsing build files.
+* lets you find and keep your place in code
 
 
 ---
-# Gradle and security
+## Code exploration tool primitives
 
-Analyzing Gradle is tricky, because **arbitrary code execution**.
+* Essential abilities
+    * Jump to def
+    * Find references
+    * Symbol search
+    * Text search (as a fallback)
 
-What can Gradle plugin developers do?
+* Low mental overhead
+  * *Just works* across dependency boundaries
 
-* Make Gradle scripts easier to statically analyze
-
-  * Obey conventions in usage of DSL.
-
-  * Expose safe, dynamic ways of exporing build metadata.
-
-  * Create a Gradle plugin that emits metadata in a standard format
-    run on a developer's machine and pushed upstream.
-
-
-???
-
-TODO: credit Aaron Leung in slides
-
-TODO: how much of Java language server to open-source before Gradle Summit?
+* Keep your place
+  * Hyperlinks
+  * Tabs or windows, buffer navigation
 
 
 ---
-# How does Gradle make this all a lot easier?
+## Code exploration tool examples
+
+* IDE
+
+* grep
+
+* Sourcegraph
+
+
+---
+
+![Jump to def in Sourcegraph](images/j2d.png)
 
 
 
 ---
-# How you can make your Gradle projects as accessible to analysis tools
 
-1. Adhere to conventions
+## Gradle and code exploration
 
-1. Favor simplicity over unnecessary fanciness
+A global semantic code exploration tool needs to understand relationships between different corpuses of code.
 
+Hence, it needs to understand Gradle in order to:
+
+- fetch the right dependencies to make the compiler happy
+
+- understand which symbols belong to which dependencies
+
+- map dependency symbols to their source code
+
+
+---
+## Gradle can be hard for tool builders
+
+
+---
+## Requests
+
+Gradle maintainers:
+
+* Consider promoting stronger conventions.
+
+* Make Gradle seems more like "data" rather than "code".
+
+* Consider not just usability for end-users, but also tool builders.
+
+Gradle users:
+
+* Copy the conventions present in popular open-source libraries.
+
+* Do the simplest thing to get the job done.
+
+* Write scripts as declaratively as possible.
 
 ---
 # Takeaways
 
-New process
+1. Learn from these examples!
+
+1. Try out our code understanding process.
+
+1. Build smart tools that speak Gradle.
 
 
 ---
@@ -1237,19 +1183,6 @@ beyang@sourcegraph.com
 
 [@beyang](https://twitter.com/beyang)
 
-
----
-# Appendix
-
----
-# DuckDuckGo app
-
-TODO
-
----
-# PocketHub app
-
-TODO
 
 
 
