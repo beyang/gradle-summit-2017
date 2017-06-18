@@ -23,6 +23,22 @@
       img {
           max-width: 100%;
       }
+      
+      
+      @page {
+          size: 1210px 681px;
+          margin: 0;
+      }
+
+      @media print {
+          .remark-slide-scaler {
+              width: 100% !important;
+              height: 100% !important;
+              transform: scale(1) !important;
+              top: 0 !important;
+              left: 0 !important;
+          }
+      }
     </style>
   </head>
   <body>
@@ -53,7 +69,7 @@ Good artists copy. Great artists steal.
 </div>
 
 ---
-# What we're going to talk about
+# What this talk is about
 
 * **Examples** from 3 open-source Android apps and how they:
     * Use the model-view-adapter pattern
@@ -172,11 +188,13 @@ So reading it is **boring**.
 ---
 # Turn it into a conversation
 
-1. Ask a question of interest
+1. Ask a question of interest.
 
-2. Find the answer
+2. Find the answer.
 
-3. Ask another question
+3. Make sure you understand the answer well enough that implementing it yourself would be "due diligence."
+
+4. Ask another question.
 
 ???
 
@@ -1029,9 +1047,453 @@ public class NearbyClientTest extends MockWebServerTest {
 
 - Uses OkHttp and Retrofit for calls to Wikipedia API, Mockito to test this
 
+---
+# App #2: [AnotherMonitor](https://play.google.com/store/apps/details?id=org.anothermonitor)
+
+<table>
+<tr>
+    <td width="50%">
+        <img src="images/monitor/main.png" style="width: 70%;">
+        </td>
+    <td width="50%" style="vertical-align: top;">
+    A small open-source app that hooks into system-level APIs.
+    <ul>
+        <li>14 Java files</li>
+        <br>
+        <li>3,811 lines of code</li>
+        <br>
+        <li>Very few comments</li>
+        <br>
+        <li>43 commits over 2 years</li>
+    </ul>
+    </td>
+</tr>
+</table>
+
 
 ---
-## Provides real-life examples for
+## AnotherMonitor topics of interest
+
+* How do you get CPU and memory usage?
+
+* How do you display a nice chart?
+
+---
+## Where's the "main" function?
+```java
+public class ActivityMain extends Activity {
+    ...
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		startService(new Intent(this, ServiceReader.class));
+		setContentView(R.layout.activity_main);
+
+		mPrefs = getSharedPreferences(getString(R.string.app_name) + C.prefs, MODE_PRIVATE);
+		...
+    }
+    ...
+}
+```
+
+([source](https://sourcegraph.com/github.com/AntonioRedondo/AnotherMonitor@8b7fc67af9216ccdd3209cc014901b12efb5da3e/-/blob/AnotherMonitor/src/main/java/org/anothermonitor/ActivityMain.java#L246:14-246:22))
+
+---
+## What's done on initialization?
+
+```java
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		startService(new Intent(this, ServiceReader.class));
+		setContentView(R.layout.activity_main);
+
+		mPrefs = getSharedPreferences(getString(R.string.app_name) + C.prefs, MODE_PRIVATE);
+        ...
+        
+		res = getResources();
+		sD = res.getDisplayMetrics().density;
+        ...
+		mVG = (ViewGraphic) findViewById(R.id.ANGraphic);
+
+		graphicMode = mPrefs.getInt(C.graphicMode, C.graphicModeShowMemory);
+		mVG.setGraphicMode(graphicMode);
+		...
+		mBMemory = (Button) findViewById(R.id.BMemory);
+		mBMemory.setOnClickListener(new View.OnClickListener() { ... });
+		...
+    }
+```
+([source](https://sourcegraph.com/github.com/AntonioRedondo/AnotherMonitor@8b7fc67af9216ccdd3209cc014901b12efb5da3e/-/blob/AnotherMonitor/src/main/java/org/anothermonitor/ActivityMain.java#L246:14-246:22))
+
+
+---
+### How does it render this data in the chart view?
+
+`TextureView`: special hardware-accelerated view, can be rendered in
+separate thread.
+
+```java
+public class ViewGraphic extends TextureView {
+	private boolean graphicInitialised,
+					 cpuTotalD, cpuAMD,
+					 memUsedD, memAvailableD, memFreeD, cachedD, thresholdD;
+	private int processesMode, graphicMode, yTop, yBottom, xLeft, xRight, yBottomTextSpace=25, xLeftTextSpace=10, yLegendSpace = 8, graphicHeight, graphicWidth, minutes, seconds, intervalTotalNumber, memTotal,
+				 thickParam, thickGrid, thickEdges, tempVar, textSize, textSizeLegend, yTopSeparation;
+	private String readIntervalText, updateIntervalText, graphicIntervaWidthlText, recordingText = "Recording";
+	private Rect bgRect;
+    ...
+	private ServiceReader mSR;
+	private Resources res;
+	private Thread mThread;
+    ...
+}
+```
+([source](https://sourcegraph.com/github.com/AntonioRedondo/AnotherMonitor@8b7fc67af9216ccdd3209cc014901b12efb5da3e/-/blob/AnotherMonitor/src/main/java/org/anothermonitor/ViewGraphic.java#L29:14-29:25))
+
+???
+
+* `TextureView` used when hardware acceleration is desired... overkill?
+
+
+---
+### How does it render this data in the chart view?
+
+View update logic spread across 2 classes:
+
+```java
+public class ActivityMain extends Activity {
+    ...
+	private Runnable drawRunnable = new Runnable() {
+		...
+	}, drawRunnableGraphic = new Runnable() {
+		@Override
+		public void run() {
+			mThread = new Thread() {
+				@Override
+				public void run() {
+					Canvas canvas = null;
+					if (!canvasLocked) { // http://stackoverflow.com/questions/9792446/android-java-lang-illegalargumentexception
+						canvas = mVG.lockCanvas();
+						if (canvas != null) {
+							canvasLocked = true;
+							mVG.onDrawCustomised(canvas, mThread);
+
+							// https://github.com/AntonioRedondo/AnotherMonitor/issues/1
+							// http://stackoverflow.com/questions/23893813/canvas-restore-causing-underflow-exception-in-very-rare-cases
+							try {
+								mVG.unlockCanvasAndPost(canvas);
+							} catch (IllegalStateException e) {
+								Log.w("Activity main: ", e.getMessage());
+							}
+```
+
+---
+### How does it render this data in the chart view?
+
+```java
+public class ViewGraphic extends TextureView {
+    ...
+    //	@Override
+	@SuppressWarnings("unchecked")
+	protected void onDrawCustomised(Canvas canvas, Thread thread) {
+		if (mSR == null || canvas == null)
+			return;
+		else if (!graphicInitialised)
+			initializeGraphic();
+		mThread = thread;
+
+		...
+		if (mThread == null || mThread.isInterrupted())
+			return;
+		canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
+		if (mThread.isInterrupted())
+			return;
+		canvas.drawRect(bgRect, bgPaint);
+		...
+	}
+}
+```
+
+---
+### Where does CPU and memory data come from?
+
+```java
+public class ActivityMain extends Activity {
+	...
+	private ServiceReader mSR;
+	...
+	private Runnable drawRunnable = new Runnable() {
+		@Override
+		public void run() {
+				...
+				setTextLabelCPU(null, mTVCPUTotalP, mSR.getCPUTotalP());
+				...
+				setTextLabelMemory(mTVMemUsed, mTVMemUsedP, mSR.getMemUsed());
+				setTextLabelMemory(mTVMemAvailable, mTVMemAvailableP, mSR.getMemAvailable());
+				setTextLabelMemory(mTVMemFree, mTVMemFreeP, mSR.getMemFree());
+				setTextLabelMemory(mTVCached, mTVCachedP, mSR.getCached());
+				setTextLabelMemory(mTVThreshold, mTVThresholdP, mSR.getThreshold());
+```
+([source](https://sourcegraph.com/github.com/AntonioRedondo/AnotherMonitor@8b7fc67af9216ccdd3209cc014901b12efb5da3e/-/blob/AnotherMonitor/src/main/java/org/anothermonitor/ActivityMain.java#L97-98))
+
+---
+### Where does CPU and memory data come from? (continued)
+
+```java
+public class ServiceReader extends Service {
+	...
+	private ActivityManager.MemoryInfo mi;
+	...
+	private Runnable readRunnable = new Runnable() {
+		@Override
+		public void run() {
+			// The service makes use of an explicit Thread instead of a Handler because with the Threat the code is executed more synchronously.
+			// However the ViewGraphic is drawed with a Handler because the drawing code must be executed in the UI thread.
+			Thread thisThread = Thread.currentThread();
+			while (readThread == thisThread) {
+				read();
+				try {
+					Thread.sleep(intervalRead);
+				} catch (InterruptedException e) {
+					break;
+				}
+			}
+		}
+	};
+	private volatile Thread readThread = new Thread(readRunnable, C.readThread);
+	...
+}
+```
+
+
+---
+### Where does CPU and memory data come from? (continued)
+
+```java
+public class ServiceReader extends Service {
+	...
+	private void read() {
+		try {
+			reader = new BufferedReader(new FileReader("/proc/meminfo"));
+			s = reader.readLine();
+			while (s != null) {
+    	        ...
+            }
+            ...
+//			CPU usage percents calculation. It is possible negative values or values higher than 100% may appear.
+//			http://stackoverflow.com/questions/1420426
+//			http://kernel.org/doc/Documentation/filesystems/proc.txt
+			reader = new BufferedReader(new FileReader("/proc/stat"));
+			sa = reader.readLine().split("[ ]+", 9);
+			work = Long.parseLong(sa[1]) + Long.parseLong(sa[2]) + Long.parseLong(sa[3]);
+			total = work + Long.parseLong(sa[4]) + Long.parseLong(sa[5]) + Long.parseLong(sa[6]) + Long.parseLong(sa[7]);
+			...
+        }
+		...
+    }
+```
+([source](https://sourcegraph.com/github.com/AntonioRedondo/AnotherMonitor@8b7fc67af9216ccdd3209cc014901b12efb5da3e/-/blob/AnotherMonitor/src/main/java/org/anothermonitor/ServiceReader.java#L259:15-259:19))
+
+
+---
+# App #3: [AntennaPod](http://antennapod.org/)
+
+A medium-sized open-source podcast app.
+
+* 356 Java files
+
+* 60,937 lines of code
+
+* 3,937 commits over 5.5 years
+
+<img src="images/pod/main.png" style="width: 23%; box-shadow: 0 0 7px 0 gray;">
+<img src="images/pod/menu.png" style="width: 23%; box-shadow: 0 0 7px 0 gray;">
+<img src="images/pod/playback.png" style="width: 23%; box-shadow: 0 0 7px 0 gray;">
+<img src="images/pod/episodes.png" style="width: 23%; box-shadow: 0 0 7px 0 gray;">
+
+
+---
+# AntennaPod topics of interest
+
+* How do you create a navigation menu interface?
+
+* How do you make a "sticky" playback interface?
+
+* How do you persist large (audio) files?
+
+
+---
+### Where's the "main" function?
+
+```java
+/**
+ * The activity that is shown when the user launches the app.
+ */
+public class MainActivity extends CastEnabledActivity implements NavDrawerActivity {
+	...
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        setTheme(UserPreferences.getNoTitleTheme());
+        super.onCreate(savedInstanceState);
+        StorageUtils.checkStorageAvailability(this);
+        setContentView(R.layout.main);
+
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+		...
+    }
+```
+([source](https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/app/src/main/java/de/danoeh/antennapod/activity/MainActivity.java?q=class%20CastEnabledActivity#L125:17-125:25))
+
+---
+### What's done on initialization?
+
+```java
+public class MainActivity extends CastEnabledActivity implements NavDrawerActivity {
+	...
+    public void onCreate(Bundle savedInstanceState) {
+		...
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+		...
+        drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
+        navList = (ListView) findViewById(R.id.nav_list);
+        navDrawer = findViewById(R.id.nav_layout);
+        ...
+        final FragmentManager fm = getSupportFragmentManager();
+		...
+        FragmentTransaction transaction = fm.beginTransaction();
+
+        Fragment mainFragment = fm.findFragmentByTag("main");
+        if (mainFragment != null) {
+            transaction.replace(R.id.main_view, mainFragment);
+        } else {
+            String lastFragment = getLastNavFragment();
+			...
+        }
+        externalPlayerFragment = new ExternalPlayerFragment();
+        transaction.replace(R.id.playerFragment, externalPlayerFragment, ExternalPlayerFragment.TAG);
+        transaction.commit();
+
+        checkFirstLaunch();
+}
+```
+
+
+---
+### How do you create a navigation menu interface?
+
+```java
+public class MainActivity extends CastEnabledActivity implements NavDrawerActivity {
+	...
+    private DrawerLayout drawerLayout;
+	...
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+		...
+        drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
+        navList = (ListView) findViewById(R.id.nav_list);
+        navDrawer = findViewById(R.id.nav_layout);
+
+        drawerToggle = new ActionBarDrawerToggle(this, drawerLayout, R.string.drawer_open, R.string.drawer_close);
+        if (savedInstanceState != null) {
+            int backstackCount = savedInstanceState.getInt(SAVE_BACKSTACK_COUNT, 0);
+            drawerToggle.setDrawerIndicatorEnabled(backstackCount == 0);
+        }
+        drawerLayout.setDrawerListener(drawerToggle);
+		...
+	}
+```
+([source](https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/app/src/main/java/de/danoeh/antennapod/activity/MainActivity.java#L143-153))
+
+???
+
+NOTE: no use of Butterknife for view binding here
+
+
+---
+### How do you make a "sticky" playback interface?
+
+```java
+public class MainActivity extends CastEnabledActivity implements NavDrawerActivity {
+	...
+    private ExternalPlayerFragment externalPlayerFragment;
+	...
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+		...
+        externalPlayerFragment = new ExternalPlayerFragment();
+        transaction.replace(R.id.playerFragment, externalPlayerFragment, ExternalPlayerFragment.TAG);
+	}
+}
+```
+([source](https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/app/src/main/java/de/danoeh/antennapod/activity/MainActivity.java?q=navigation#L199-202))
+
+
+---
+### How do you persist large (audio) files?
+
+```java
+public class MainActivity extends CastEnabledActivity implements NavDrawerActivity {
+	...
+    public static final String[] NAV_DRAWER_TAGS = {
+            QueueFragment.TAG,
+            EpisodesFragment.TAG,
+            SubscriptionFragment.TAG,
+            DownloadsFragment.TAG,
+            PlaybackHistoryFragment.TAG,
+            AddFeedFragment.TAG,
+            NavListAdapter.SUBSCRIPTION_LIST_TAG
+    };
+```
+
+
+---
+### How do you persist large (audio) files? (continued)
+
+(TODO: connect these with previous slide's code and next slide's code)
+
+* [AllEpisodesFragment](https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/app/src/main/java/de/danoeh/antennapod/fragment/AllEpisodesFragment.java#L268:20-268:41)
+* [FeedItemMenuHandler.onMenuItemClicked](https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/app/src/main/java/de/danoeh/antennapod/menuhandler/FeedItemMenuHandler.java#L157:27-157:44)
+
+* [DownloadService](https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/core/src/main/java/de/danoeh/antennapod/core/service/download/DownloadService.java?q=DownloaderCallback#L88-89)
+
+* [HttpDownloader.download](https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/core/src/main/java/de/danoeh/antennapod/core/service/download/HttpDownloader.java#L47:20-47:28)
+
+
+---
+### How do you persist large (audio) files? (continued)
+
+```java
+public class HttpDownloader extends Downloader {
+	...
+    @Override
+    protected void download() {
+        File destination = new File(request.getDestination());
+        final boolean fileExists = destination.exists();
+
+        if (request.isDeleteOnFailure() && fileExists) {
+            Log.w(TAG, "File already exists");
+            if (request.getFeedfileType() != FeedImage.FEEDFILETYPE_FEEDIMAGE) {
+                onFail(DownloadError.ERROR_FILE_EXISTS, null);
+                return;
+            } else {
+                onSuccess();
+                return;
+            }
+        }
+
+        OkHttpClient.Builder httpClientBuilder = AntennapodHttpClient.newBuilder();
+        httpClientBuilder.interceptors().add(new BasicAuthorizationInterceptor(request));
+        OkHttpClient httpClient = httpClientBuilder.build();
+        RandomAccessFile out = null;
+        InputStream connection;
+        ResponseBody responseBody = null;
+```
+([source](https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/core/src/main/java/de/danoeh/antennapod/core/service/download/HttpDownloader.java#L46-68))
+
+
+---
+## Recap
 
 - How to wire up a `NavTab`-based app.
 
@@ -1047,6 +1509,15 @@ public class NearbyClientTest extends MockWebServerTest {
 
 - Built intuition about Android's flavor of MVC
 
+- Use of `TextureView`
+
+- Use of `DrawerLayout` to create a Navigation Drawer UI
+
+- Reading low-level CPU and memory stats
+
+- Downloading content to files
+
+- Persistent audio playback view
 
 ???
 
@@ -1071,6 +1542,23 @@ to understanding almost any codebase.
 ???
 
 There's a feedback loop
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ---
