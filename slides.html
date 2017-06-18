@@ -1611,14 +1611,10 @@ There's a feedback loop
 ![Jump to def in Sourcegraph](images/j2d.png)
 
 
-
 ---
+## How Sourcegraph uses Gradle
 
-## Gradle and code exploration
-
-A global semantic code exploration tool needs to understand relationships between different corpuses of code.
-
-Hence, it needs to understand Gradle in order to:
+To understand semantic relationships in code, Sourcegraph must:
 
 - fetch the right dependencies to make the compiler happy
 
@@ -1628,7 +1624,18 @@ Hence, it needs to understand Gradle in order to:
 
 
 ---
-## Gradle can be hard for tool builders
+## How Sourcegraph uses Gradle (continued)
+
+[TODO: image of Java language server architecture that shows how Gradle
+fits in with `javac` and Sourcegraph architecture]
+
+
+---
+## Gradle analysis struggles
+
+* Dynamically typed Turing-complete scripting language
+
+* Gradle scripts often take full advantage of this
 
 
 ---
