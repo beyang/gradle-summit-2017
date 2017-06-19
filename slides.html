@@ -90,19 +90,12 @@ Good artists copy. Great artists steal.
 ---
 # What this talk is about
 
-* **Examples** from 3 open-source Android apps and how they:
-    * Use the model-view-adapter pattern
-    * Efficiently load and display large feeds of data
-    * Persist data to a SQLite database
-    * Use common third-party libraries to make HTTP API requests and
-      bind view data to the underlying model
-    * Unit test
-    * Manage memory of large data items (images) efficiently
+* **Examples** from 3 open-source Android apps
 
 * A **process** you can use to efficiently discover these examples on
   your own
 
-* The **tool** we built with Gradle to accelerate this process
+* A **tool** built with Gradle to accelerate this process
 
 ???
 
@@ -130,6 +123,24 @@ seen.
 * Here's a sampling of the knowledge that the graph contains, curated
   using our experience indexing it.
 
+---
+## Topics we'll cover in examples
+
+* Model-view-controller / model-view-adapter patterns
+* Using `Butterknife` to bind views
+* Navigation drawer and `DrawerLayout`
+* `RecyclerView` for data feeds
+* `BottomNavigationView`
+* `MapView`
+* `TextureView`
+* HTTP requests (via OkHttp)
+* REST API clients (via Retrofit)
+* Mocking HTTP client via `Mockito`
+* Persisting data to a SQLite database
+* Read low-level system stats
+* Persistent bottom view
+* Writing to filesystem
+
 
 ---
 # App #1: [Wikipedia](https://play.google.com/store/apps/details?id=org.wikipedia)
@@ -153,6 +164,8 @@ A medium-sized [open-source app](https://github.com/wikimedia/apps-android-wikip
 
 * 5,378 commits over 4 years
 
+* 496 GitHub stars
+
 If the Wikipedia app were a book, it'd be half the length of *Moby Dick*.<sup>*</sup>
 
 .footer[\* Assuming 1 LoC == 1.5 words]
@@ -169,59 +182,59 @@ along. Make people follow along. Point out that the links to source
 code should be followed, and folks should stay in the source code (and
 only refer back to the slides if they get lost).
 
----
-# Ways to dive into code
+<!-- --- -->
+<!-- # Ways to dive into code -->
 
-Good approaches:
+<!-- Good approaches: -->
 
-* Read the docs
+<!-- * Read the docs -->
 
-* Fix a bug
+<!-- * Fix a bug -->
 
-* Get a tutorial from a coworker
+<!-- * Get a tutorial from a coworker -->
 
-Bad approach:
+<!-- Bad approach: -->
 
-* Try to read the code
+<!-- * Try to read the code -->
 
-???
+<!-- ??? -->
 
-Read the docs
-* Pros:
-  * Good high-level understanding
-* Cons:
-  * If docs are long, can be tedious
-  * Docs might not exist or be out of date
+<!-- Read the docs -->
+<!-- * Pros: -->
+<!--   * Good high-level understanding -->
+<!-- * Cons: -->
+<!--   * If docs are long, can be tedious -->
+<!--   * Docs might not exist or be out of date -->
 
-Fix a bug: deep but narrow slice of knowledge
-* Pros
-  * have to understand how things actually work
-* Cons
-  * Takes a good amount of time
-  * Only gives you narrow slice
-  * Need an expert to help you pick good bugs (not too hard, not too easy, yields good knowledge)
+<!-- Fix a bug: deep but narrow slice of knowledge -->
+<!-- * Pros -->
+<!--   * have to understand how things actually work -->
+<!-- * Cons -->
+<!--   * Takes a good amount of time -->
+<!--   * Only gives you narrow slice -->
+<!--   * Need an expert to help you pick good bugs (not too hard, not too easy, yields good knowledge) -->
 
-Tutorial from coworker
-* Pros
-  * 
+<!-- Tutorial from coworker -->
+<!-- * Pros -->
+<!--   * -->
 
 
----
-# Problems with reading code
+<!-- --- -->
+<!-- # Problems with reading code -->
 
-A codebase is like a dictionary.
+<!-- A codebase is like a dictionary. -->
 
-* A bunch of definitions
+<!-- * A bunch of definitions -->
 
-* Definitions reference one another
+<!-- * Definitions reference one another -->
 
-* No obvious place to start
+<!-- * No obvious place to start -->
 
-* No obvious narrative arc
+<!-- * No obvious narrative arc -->
 
-* Don't want to read the whole thing
+<!-- * Don't want to read the whole thing -->
 
-So reading it is **boring**.
+<!-- So reading it is **boring**. -->
 
 
 ---
@@ -229,11 +242,13 @@ So reading it is **boring**.
 
 1. Ask a question of interest.
 
-2. Find the answer.
+1. Find the answer.*
 
-3. Make sure you understand the answer well enough that implementing it yourself would be "due diligence."
+1. Repeat.
 
-4. Ask another question.
+
+.footer[\* You should understand the answer well enough that implementing it yourself would be "due diligence."]
+
 
 ???
 
@@ -244,7 +259,7 @@ in teaching students as a T.A.
 
 --
 
-### Some icebreakers:
+### Some "icebreaker" questions:
 
 1. Where's your "main" function?
 
@@ -287,9 +302,6 @@ public class MainActivity {
 Search for the main activity:
 
 [![symbol search for "activity"](images/search_activity.png)](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/main/MainActivity.java#L13:14-13:26)
-
-([source](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/main/MainActivity.java#L13:14-13:26))
-
 
 
 ---
@@ -470,12 +482,18 @@ public enum HttpStatus implements EnumCode {
 
 We now know what the backbone classes are in the Wikipedia app:
 
-* `MainActivity`
-* `MainFragment`
-* `FeedFragment`
-* `HistoryFragment`
-* `NearbyFragment`
-* `ReadingListsFragment`
+```
+
+                          MainActivity
+                               |
+                               v
+                          MainFragment
+                               |
+      _________________________v_________________________
+     |                |                  |               |
+     v                v                  v               v
+FeedFragment  ReadingListsFragment  HistoryFragment  NearbyFragment
+```
 
 ???
 
@@ -517,13 +535,12 @@ Now you have a picture of the app in broad strokes.
 
 * How does it fetch data from the server?
 
-* How do I get "pull-down-to-refresh"?
-
 ---
 ### How does it load and display cards?
 
 `FeedFragment` holds references to models and views for the feed.
 
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/FeedFragment.java#L44:14-44:26">
 ```java
 public class FeedFragment extends Fragment implements BackPressedHandler {
     @BindView(R.id.feed_swipe_refresh_layout) SwipeRefreshLayout swipeRefreshLayout;
@@ -549,7 +566,7 @@ public class FeedFragment extends Fragment implements BackPressedHandler {
 }
 
 ```
-([source](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/FeedFragment.java#L44:14-44:26))
+</a>
 
 ???
 
@@ -559,14 +576,17 @@ Next: `FeedView`
 ---
 ### How does the feed view work?
 
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/FeedFragment.java#L46-47">
 ```java
 public class FeedFragment extends Fragment implements BackPressedHandler {
     ...
     @BindView(R.id.fragment_feed_feed) FeedView feedView;
 ```
+</a>
 
-`FeedView` is a great example of using the SDK's `RecyclerView`, "a flexible view for providing a limited window into a large data set."
+`FeedView` subclasses `RecyclerView`:
 
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/view/FeedView.java#L19:14">
 ```java
 public class FeedView extends AutoFitRecyclerView {
     private StaggeredGridLayoutManager recyclerLayoutManager;
@@ -583,16 +603,23 @@ public class FeedView extends AutoFitRecyclerView {
     }
     ...
 ```
+</a>
 
 Side note: the `RecyclerView`
 [documentation](https://developer.android.com/reference/android/support/v7/widget/RecyclerView.html) is
 13,000 words long.
 
+???
+
+`RecyclerView`: "a flexible view for providing a limited window into a large data set."
+
 
 ---
-### How do you initialize the feed view?
+### How does is the feed initialized?
 
 `FeedFragment` wires up the view to adapter, callback, and scrollback listener.
+
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@5ed559f1e05e6e3379a427c49d52578a06b454d7/-/blob/app/src/main/java/org/wikipedia/feed/FeedFragment.java#L97-101">
 ```java
 @Nullable @Override public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         ...
@@ -602,12 +629,12 @@ Side note: the `RecyclerView`
         feedView.addOnScrollListener(feedScrollListener);
 }
 ```
+</a>
 
 The callbacks handle user-triggered events from the view.
 
 The adapter provides view lifecycle handler methods and view data provider methods.
 
-([source](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@5ed559f1e05e6e3379a427c49d52578a06b454d7/-/blob/app/src/main/java/org/wikipedia/feed/FeedFragment.java#L97-101))
 
 ---
 ### Where are the card views created and updated?
@@ -639,6 +666,11 @@ public class FeedAdapter<T extends View & FeedCardView<?>> extends DefaultRecycl
         }
     }
 ```
+
+???
+
+This follows the standard `RecyclerView` pattern.
+
 
 ---
 ### How do you customize card appearance?
@@ -946,7 +978,7 @@ public class NearbyClientTest extends MockWebServerTest {
         <img src="images/monitor/main.png" style="width: 70%;">
         </td>
     <td width="50%" style="vertical-align: top;">
-    A small open-source app that hooks into system-level APIs.
+    A small open-source app that displays system-level stats.
     <ul>
         <li>14 Java files</li>
         <br>
@@ -955,6 +987,8 @@ public class NearbyClientTest extends MockWebServerTest {
         <li>Very few comments</li>
         <br>
         <li>43 commits over 2 years</li>
+        <br>
+        <li>426 GitHub stars</li>
     </ul>
     </td>
 </tr>
@@ -1195,6 +1229,8 @@ A medium-sized open-source podcast app.
 
 * 3,937 commits over 5.5 years
 
+* 1,577 GitHub stars
+
 <img src="images/pod/main.png" style="width: 23%; box-shadow: 0 0 7px 0 gray;">
 <img src="images/pod/menu.png" style="width: 23%; box-shadow: 0 0 7px 0 gray;">
 <img src="images/pod/playback.png" style="width: 23%; box-shadow: 0 0 7px 0 gray;">
@@ -1208,7 +1244,7 @@ A medium-sized open-source podcast app.
 
 * How do you make a "sticky" playback interface?
 
-* How do you persist large (audio) files?
+* How do you persist large audio files?
 
 
 ---
@@ -1320,7 +1356,7 @@ public class MainActivity extends CastEnabledActivity implements NavDrawerActivi
 
 
 ---
-### How do you persist large (audio) files?
+### How do you persist large audio files?
 
 ```java
 public class MainActivity extends CastEnabledActivity implements NavDrawerActivity {
@@ -1338,7 +1374,7 @@ public class MainActivity extends CastEnabledActivity implements NavDrawerActivi
 
 
 ---
-### How do you persist large (audio) files? (continued)
+### How do you persist large audio files? (continued)
 
 (TODO: connect these with previous slide's code and next slide's code)
 
@@ -1351,7 +1387,7 @@ public class MainActivity extends CastEnabledActivity implements NavDrawerActivi
 
 
 ---
-### How do you persist large (audio) files? (continued)
+### How do you persist large audio files? (continued)
 
 ```java
 public class HttpDownloader extends Downloader {
