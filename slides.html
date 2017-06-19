@@ -40,26 +40,27 @@
           }
       }
 
-      .hljs {
+      a .hljs {
           background: #151d28 !important;
           color: #c9d4e3 !important;
       }
-      .hljs .hljs-title {
+      a .hljs .hljs-title {
           color: #fff3bf !important;
           font-weight: normal;
       }
-      .hljs .hljs-keyword {
+      a .hljs .hljs-keyword {
           color: #329af0;
           font-weight: normal;
       }
-      .hljs .hljs-meta {
+      a .hljs .hljs-meta {
           color: #4ec9b0;
       }
-      .hljs .hljs-number {
+      a .hljs .hljs-number {
           color: #d3f9d8;
       }
 
     </style>
+
   </head>
   <body>
     <textarea id="source">
@@ -427,11 +428,15 @@ And these map clearly onto what's present in the UI:
 ---
 ### Side note: EnumCode for checked conversion of ints to enums
 
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/model/EnumCode.java#L3:18-3:26">
 ```java
 public interface EnumCode {
     int code();
 }
 ```
+</a>
+
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/database/http/HttpStatus.java#L9:35-9:43">
 ```java
 public enum HttpStatus implements EnumCode {
 
@@ -454,7 +459,7 @@ public enum HttpStatus implements EnumCode {
 
     ...
 ```
-([source](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/database/http/HttpStatus.java#L9:35-9:43))
+</a>
 
 
 ---
@@ -1733,5 +1738,15 @@ public class ContentProviderClient {
     <script>
       var slideshow = remark.create();
     </script>
+    <script>
+        // Convenience script, so you don't have to set target on each link
+        document.querySelectorAll("a[href]").forEach(a => {
+            a.setAttribute("target", "_blank");
+            if (a.querySelectorAll("code").length > 0) {
+                a.style.textDecoration = "none";
+            }
+        });
+    </script>
+
   </body>
 </html>
