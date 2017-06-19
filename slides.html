@@ -287,7 +287,7 @@ Just like a conversation with a person, there are a few standard
 
 --
 
-Looking for:
+Looking for something like:
 
 ```java
 public class MainActivity {
@@ -308,29 +308,64 @@ Search for the main activity:
 ### Wikipedia, how do you arrive at your initial state?
 
 `MainActivity` itself doesn't tell us, but it's a subclass, so let's
-walk up its inheritance tree
-([source](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/main/MainActivity.java#L21:29-21:40)):
+walk up its inheritance tree:
 
-* `MainActivity`
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/main/MainActivity.java#L13-14">
 ```java
 public class MainActivity extends SingleFragmentToolbarActivity<MainFragment>
 ```
-* *inherits* `SingleFragmentToolbarActivity`
-* *inherits* `SingleFragmentActivity`
-* *contains* `SingleFragmentActivity.onCreate`
+</a>
+
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/activity/SingleFragmentToolbarActivity.java#L15:23">
 ```java
+public abstract class SingleFragmentToolbarActivity<T extends Fragment> extends SingleFragmentActivity<T> {
+```
+</a>
+
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/activity/SingleFragmentActivity.java#L14:23">
+```java
+public abstract class SingleFragmentActivity<T extends Fragment> extends ThemedActionBarActivity {
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(getLayout());
+
+        if (!isFragmentCreated()) {
             addFragment(createFragment());
+        }
+    }
 ```
-* *calls* `MainActivity.createFragment`
+
+---
+### Wikipedia, how do you arrive at your initial state? (continued)
+
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/main/MainActivity.java#L20-23">
 ```java
+public class MainActivity extends SingleFragmentToolbarActivity<MainFragment>
+    implements MainFragment.Callback {
+    ...
+    @Override protected MainFragment createFragment() {
         return MainFragment.newInstance();
+    }
 ```
-* *calls* `MainFragment.newInstance`
-* *initialized with* `MainFragment.onCreateView`
+</a>
+
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/main/MainFragment.java#L101-123:6">
+```java
+public class MainFragment extends Fragment implements BackPressedHandler, FeedFragment.Callback,
+        NearbyFragment.Callback, HistoryFragment.Callback, SearchFragment.Callback,
+        LinkPreviewDialog.Callback {
+	...
+    @Nullable @Override public View onCreateView(LayoutInflater inflater,
+                                                 @Nullable ViewGroup container,
+                                                 @Nullable Bundle savedInstanceState) {
+        super.onCreateView(inflater, container, savedInstanceState);
+        View view = inflater.inflate(R.layout.fragment_main, container, false);
+        unbinder = ButterKnife.bind(this, view);
+```
+</a>
 
 ???
-
-TODO: hyperlinks to code on Sourcegraph
 
 
 ---
@@ -365,6 +400,7 @@ of [Butterknife](https://github.com/JakeWharton/butterknife)
 to
 [bind view objects to fields in the fragments](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/main/MainFragment.java#L106:32-106:36).
 
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/main/MainFragment.java#L74:14-74:26">
 ```java
 public class MainFragment extends Fragment implements BackPressedHandler, FeedFragment.Callback,
         NearbyFragment.Callback, HistoryFragment.Callback, SearchFragment.Callback,
@@ -395,7 +431,7 @@ public class MainFragment extends Fragment implements BackPressedHandler, FeedFr
     ...
 }
 ```
-
+</a>
 
 ---
 ### What can the user do from here?
