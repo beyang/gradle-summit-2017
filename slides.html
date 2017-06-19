@@ -57,8 +57,6 @@ class: center, middle
 
 * CTO, [Sourcegraph](https://sourcegraph.com/)
 
-* Former T.A.
-
 
 ---
 
@@ -165,6 +163,27 @@ Good approaches:
 Bad approach:
 
 * Try to read the code
+
+???
+
+Read the docs
+* Pros:
+  * Good high-level understanding
+* Cons:
+  * If docs are long, can be tedious
+  * Docs might not exist or be out of date
+
+Fix a bug: deep but narrow slice of knowledge
+* Pros
+  * have to understand how things actually work
+* Cons
+  * Takes a good amount of time
+  * Only gives you narrow slice
+  * Need an expert to help you pick good bugs (not too hard, not too easy, yields good knowledge)
+
+Tutorial from coworker
+* Pros
+  * 
 
 
 ---
@@ -474,7 +493,7 @@ Now you have a picture of the app in broad strokes.
 * How do I get "pull-down-to-refresh"?
 
 ---
-### How does the feed work?
+### How does it load and display cards?
 
 `FeedFragment` holds references to models and views for the feed.
 
@@ -504,6 +523,10 @@ public class FeedFragment extends Fragment implements BackPressedHandler {
 
 ```
 ([source](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/FeedFragment.java#L44:14-44:26))
+
+???
+
+Next: `FeedView`
 
 
 ---
@@ -716,7 +739,10 @@ public class AggregatedFeedContentClient implements FeedClient {
 
 ???
 
-This is an example of the use of the Retrofit library.
+* `FeedCoordinatorBase` manages fetching and organizing cards from a remote data source.
+
+* Example use of the Retrofit library. (A "type-safe HTTP client for Android" to expose a REST API as a Java interface).
+
 
 ---
 ### How do the reading lists work?
