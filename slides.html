@@ -390,6 +390,7 @@ public class MainFragment extends Fragment implements BackPressedHandler, FeedFr
 
 The `NavTab` class outlines exactly what the user's options are:
 
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/navtab/NavTab.java#L16-36:7">
 ```java
 public enum NavTab implements EnumCode {
     EXPLORE(R.string.nav_item_feed, R.drawable.ic_globe) {
@@ -416,6 +417,8 @@ public enum NavTab implements EnumCode {
     ...
 }
 ```
+</a>
+
 
 ---
 ### What can the user do from here?
@@ -1736,7 +1739,11 @@ public class ContentProviderClient {
     <script src="https://remarkjs.com/downloads/remark-latest.min.js">
     </script>
     <script>
-      var slideshow = remark.create();
+      var slideshow = remark.create({
+          navigation: {
+              scroll: false
+          }
+      });
     </script>
     <script>
         // Convenience script, so you don't have to set target on each link
