@@ -154,6 +154,7 @@ Good artists copy. Great artists steal.
 * HTTP requests (via OkHttp)
 * REST API clients (via Retrofit)
 * Mocking HTTP client via `Mockito`
+* `Service` subclass for long-running background tasks
 * Persisting data to a SQLite database
 * Read low-level system stats
 * Threading
@@ -1665,6 +1666,7 @@ A medium-sized [open-source](https://sourcegraph.com/github.com/AntennaPod/Anten
 ---
 ### Where's the "main" function?
 
+<a href="https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/app/src/main/java/de/danoeh/antennapod/activity/MainActivity.java?q=class%20CastEnabledActivity#L125:17-125:25">
 ```java
 /**
  * The activity that is shown when the user launches the app.
@@ -1683,11 +1685,17 @@ public class MainActivity extends CastEnabledActivity implements NavDrawerActivi
 		...
     }
 ```
-([source](https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/app/src/main/java/de/danoeh/antennapod/activity/MainActivity.java?q=class%20CastEnabledActivity#L125:17-125:25))
+</a>
+
+???
+
+* `UserPreferences` class
+
 
 ---
-### What's done on initialization?
+### What's happens on initialization?
 
+<a href="https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/app/src/main/java/de/danoeh/antennapod/activity/MainActivity.java#L125:17-125:25">
 ```java
 public class MainActivity extends CastEnabledActivity implements NavDrawerActivity {
 	...
@@ -1718,11 +1726,28 @@ public class MainActivity extends CastEnabledActivity implements NavDrawerActivi
         checkFirstLaunch();
 }
 ```
+</a>
+
+???
+
+* `findViewById`, instead of using Butterknife
+
+* `setSupportActionBar` sets the action bar at the top
+
+* `DrawerLayout` provides the pop-out lefthand drawer
+
+* `FragmentManager` and `FragmentTransaction` to manager fragment
+  transitions and history
+
+* `ExternalPlayerFragment` controls the persistent playback footer
+
 
 
 ---
 ### How do you create a navigation menu interface?
 
+`DrawerLayout` and accompanying listener:
+<a href="https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/app/src/main/java/de/danoeh/antennapod/activity/MainActivity.java#L143-153">
 ```java
 public class MainActivity extends CastEnabledActivity implements NavDrawerActivity {
 	...
@@ -1744,16 +1769,15 @@ public class MainActivity extends CastEnabledActivity implements NavDrawerActivi
 		...
 	}
 ```
-([source](https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/app/src/main/java/de/danoeh/antennapod/activity/MainActivity.java#L143-153))
+</a>
 
-???
 
-NOTE: no use of Butterknife for view binding here
 
 
 ---
-### How do you make a "sticky" playback interface?
+### How do you make a persistent playback footer?
 
+<a href="https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/app/src/main/java/de/danoeh/antennapod/activity/MainActivity.java?q=navigation#L199-202">
 ```java
 public class MainActivity extends CastEnabledActivity implements NavDrawerActivity {
 	...
@@ -1767,12 +1791,21 @@ public class MainActivity extends CastEnabledActivity implements NavDrawerActivi
 	}
 }
 ```
-([source](https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/app/src/main/java/de/danoeh/antennapod/activity/MainActivity.java?q=navigation#L199-202))
+</a>
 
 
 ---
-### How do you persist large audio files?
+### How are audio files fetched and stored?
 
+Start with the download button:
+
+<img src="images/pod/episodes.png">
+
+---
+### How are audio files fetched and stored? (continued)
+
+All the `Fragment`s accessible from the nav drawer:
+<a href="https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/app/src/main/java/de/danoeh/antennapod/activity/MainActivity.java#L97-105:7">
 ```java
 public class MainActivity extends CastEnabledActivity implements NavDrawerActivity {
 	...
@@ -1786,24 +1819,101 @@ public class MainActivity extends CastEnabledActivity implements NavDrawerActivi
             NavListAdapter.SUBSCRIPTION_LIST_TAG
     };
 ```
+</a>
 
+<a href="https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/app/src/main/java/de/danoeh/antennapod/fragment/EpisodesFragment.java#L19-22">
+```java
+public class EpisodesFragment extends Fragment {
 
----
-### How do you persist large audio files? (continued)
+    public static final String TAG = "EpisodesFragment";
+```
+</a>
 
-(TODO: connect these with previous slide's code and next slide's code)
-
-* [AllEpisodesFragment](https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/app/src/main/java/de/danoeh/antennapod/fragment/AllEpisodesFragment.java#L268:20-268:41)
-* [FeedItemMenuHandler.onMenuItemClicked](https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/app/src/main/java/de/danoeh/antennapod/menuhandler/FeedItemMenuHandler.java#L157:27-157:44)
-
-* [DownloadService](https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/core/src/main/java/de/danoeh/antennapod/core/service/download/DownloadService.java?q=DownloaderCallback#L88-89)
-
-* [HttpDownloader.download](https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/core/src/main/java/de/danoeh/antennapod/core/service/download/HttpDownloader.java#L47:20-47:28)
 
 
 ---
-### How do you persist large audio files? (continued)
+### How are audio files fetched and stored? (continued)
 
+<a href="https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/app/src/main/java/de/danoeh/antennapod/fragment/EpisodesFragment.java#L79-87">
+```java
+    public static class EpisodesPagerAdapter extends FragmentPagerAdapter {
+
+        private final Resources resources;
+        private AllEpisodesFragment[] fragments = {
+                new NewEpisodesFragment(),
+                new AllEpisodesFragment(),
+                new FavoriteEpisodesFragment()
+        };
+```
+</a>
+
+<a href="https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/app/src/main/java/de/danoeh/antennapod/fragment/AllEpisodesFragment.java#L287-293:10">
+```java
+public class AllEpisodesFragment extends Fragment {
+    ...
+    @Override
+    public boolean onContextItemSelected(MenuItem item) {
+        ...
+        try {
+            return FeedItemMenuHandler.onMenuItemClicked(getActivity(), item.getItemId(), selectedItem);
+        } catch (DownloadRequestException e) {
+            e.printStackTrace();
+            Toast.makeText(getActivity(), e.getMessage(), Toast.LENGTH_LONG).show();
+            return true;
+        }
+```
+</a>
+
+
+
+---
+### How are audio files fetched and stored? (continued)
+
+
+Enqueue items for download:
+
+<a href="https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/core/src/main/java/de/danoeh/antennapod/core/service/download/DownloadService.java?q=DownloaderCallback#L88:41">
+```java
+public class FeedItemMenuHandler {
+    ...
+    public static boolean onMenuItemClicked(Context context, int menuItemId,
+                                            FeedItem selectedItem) throws DownloadRequestException {
+        switch (menuItemId) {
+            ...
+            case R.id.add_to_queue_item:
+                DBWriter.addQueueItem(context, selectedItem);
+                break;
+```
+</a>
+
+Download queue processed in background by `Service` subclass:
+<a href="https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/core/src/main/java/de/danoeh/antennapod/core/service/download/DownloadService.java?q=DownloaderCallback#L441-447:6">
+```java
+public class DownloadService extends Service {
+    ...
+    private Downloader getDownloader(DownloadRequest request) {
+        if (!URLUtil.isHttpUrl(request.getSource()) && !URLUtil.isHttpsUrl(request.getSource())) {
+            Log.e(TAG, "Could not find appropriate downloader for " + request.getSource());
+            return null;
+        }
+        return new HttpDownloader(request);
+    }
+```
+</a>
+
+???
+
+* `Service` performs long-running background operations
+
+
+
+---
+### How are audio files fetched and stored? (continued)
+
+[OkHttp](https://sourcegraph.com/github.com/square/okhttp/-/blob/README.md) to
+fetch data, then written to filesystem:
+
+<a href="https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/core/src/main/java/de/danoeh/antennapod/core/service/download/HttpDownloader.java?q=DownloaderCallback#L47:20-47:28">
 ```java
 public class HttpDownloader extends Downloader {
 	...
@@ -1830,7 +1940,15 @@ public class HttpDownloader extends Downloader {
         InputStream connection;
         ResponseBody responseBody = null;
 ```
-([source](https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/core/src/main/java/de/danoeh/antennapod/core/service/download/HttpDownloader.java#L46-68))
+</a>
+
+???
+
+* OkHttp to download
+
+* Write to filesystem
+
+
 
 
 ---
@@ -1848,6 +1966,7 @@ public class HttpDownloader extends Downloader {
 * HTTP requests (via OkHttp)
 * REST API clients (via Retrofit)
 * Mocking HTTP client via `Mockito`
+* `Service` subclass for long-running background tasks
 * Persisting data to a SQLite database
 * Read low-level system stats
 * Threading
@@ -1865,22 +1984,6 @@ Not covered, but could be:
 
 NOTE: emphasize use of third-party libraries. This method generalizes
 to understanding almost any codebase.
-
-
----
-<br><br>
-<center>
-<h2>Process inspires tools.</h2>
-<h2>⬇ ⬆</h2>
-<h2>Tools drive adoption of process.</h2>
-</center>
-
-???
-
-There's a feedback loop
-
-
-
 
 
 
@@ -1948,30 +2051,23 @@ There's a feedback loop
 
 
 ---
-## How Sourcegraph uses Gradle
+### Good Java code exploration tools must understand Gradle
 
-To understand semantic relationships in code, Sourcegraph must:
+- Seamless jump-to-def and find-refs
 
-- fetch the right dependencies to make the compiler happy
-
-- understand which symbols belong to which dependencies
-
-- map dependency symbols to their source code
+- Dependency structure
 
 
 ---
-## How Sourcegraph uses Gradle (continued)
-
-[TODO: image of Java language server architecture that shows how Gradle
-fits in with `javac` and Sourcegraph architecture]
-
-
----
-## Gradle analysis struggles
+### Understanding Gradle is hard
 
 * Dynamically typed Turing-complete scripting language
 
 * Gradle scripts often take full advantage of this
+
+[TODO: column 1: simple gradle script]
+
+[TODO: column 2: complex gradle script]
 
 
 ---
@@ -1999,9 +2095,9 @@ Gradle users:
 1. Learn from these examples!  
 (Further reading: [20 open-source Android apps](https://blog.aritraroy.in/20-awesome-open-source-android-apps-to-boost-your-development-skills-b62832cf0fa4))
 
-1. Try out our code understanding process.
+1. Try out a Q&A-style approach to understanding code.
 
-1. Build smart tools that speak Gradle.
+1. Use Gradle to build more tools for understanding code.
 
 
 ???
