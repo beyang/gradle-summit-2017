@@ -381,6 +381,8 @@ public abstract class SingleFragmentActivity<T extends Fragment> extends ThemedA
 ```
 ???
 
+Walk up inheritance tree:
+
 * No `MainActivity.onCreate`
 
 * Inheritance tree
@@ -404,6 +406,10 @@ public class MainActivity extends SingleFragmentToolbarActivity<MainFragment>
 ```
 </a>
 *creates new instance of `MainFragment`*
+
+???
+
+MainFragment
 
 ---
 ### Wikipedia: how does it arrive at its initial state? (continued)
@@ -437,6 +443,8 @@ public class MainFragment extends Fragment implements BackPressedHandler, FeedFr
 </a>
 
 ???
+
+MainFragment wire-up:
 
 * `createFragment() -> MainFragment`
 
@@ -487,6 +495,12 @@ public class NavTabLayout extends BottomNavigationView {
 ```
 </a>
 
+???
+
+MainFragment -> NavTabLayout
+
+
+
 
 ---
 ### Wikipedia: how does it arrive at its initial state? (continued)
@@ -509,6 +523,11 @@ public enum NavTab implements EnumCode {
     @NonNull public static FeedFragment newInstance() {
 ```
 </a>
+
+???
+
+NavTab layout -> FeedFragment.newInstance
+
 
 
 ---
@@ -633,6 +652,8 @@ public class MainFragment extends Fragment implements BackPressedHandler, FeedFr
 
 ???
 
+Butterknife
+
 * Calls to `ButterKnife.bind` replace `findViewById` boilerplate
 
 
@@ -735,15 +756,17 @@ And these map clearly onto what's present in the UI:
 
 ???
 
-1. How does the feed work?
+1. Feed
 
-    *  Are there any clever performance hacks? How does pull-down
-       refresh work?
+    * Clever performance hacks?
+    * Background fetching?
 
-1. How are reading lists stored persistently?
+1. Reading lists
 
-1. How does the app load nearby points of interest in the map view?
-   How does it do so without blocking? How does it do so efficiently?
+1. Map
+
+   * Points of interest?
+   * API client boilerplate?
 
 1. How is this app tested?
 
@@ -751,11 +774,21 @@ And these map clearly onto what's present in the UI:
 ---
 ### How does the feed work?
 
-<center><img src="images/feed.png" style="width: 25%"></center>
-
 * How does it load and display cards efficiently?
 
 * How does it fetch data from the server?
+
+<center>
+    <img src="images/feed.png" style="width: 30%;">
+    <img src="images/feed_news.png" style="width: 30%;">
+    <img src="images/feed_trending.png" style="width: 30%;">
+</center>
+
+???
+
+Different types of cards
+
+
 
 ---
 ### How does it load and display cards?
@@ -792,7 +825,6 @@ public class FeedFragment extends Fragment implements BackPressedHandler {
 
 ???
 
-Next: `FeedView`
 
 
 ---
