@@ -134,6 +134,265 @@ Sourcegraph
 * indexes all of open source, makes it easy to dive in
 
 
+---
+# How to learn from examples
+
+* Process for learning from existing code
+
+* Actual code examples from open source
+
+* Tool for accelerating the process
+
+
+
+---
+class: center,middle
+# This talk is special.
+
+
+---
+# 3 apps
+
+<img src="images/feed.png" style="width: 32%">
+<img src="images/monitor/main.png" style="width: 32%">
+<img src="images/pod/main.png" style="width: 32%">
+
+<center>
+Wikipedia
+&emsp;&emsp;&emsp;&emsp;&emsp;
+AnotherMonitor
+&emsp;&emsp;&emsp;&emsp;&emsp;
+AntennaPod
+</center>
+
+
+---
+# 3 codebases
+
+* 2,500 GitHub stars
+
+--
+
+* 1,000+ Java files
+
+--
+
+* 140,000 lines of code
+
+--
+
+* 10,0000 commits
+
+--
+
+<br>
+<center>
+<h1><em>None of which I wrote!</em></h1>
+</center>
+
+???
+
+At the end, we'll talk about how Gradle can be a foundational building
+block for tools for understanding code, not just building and
+packaging it.
+
+---
+## Learning Android by example
+
+<table><tr style="vertical-align: top;">
+
+<td style="padding-right: 3em">
+<h4>Architecture</h4>
+<ul>
+<li>Model-view-controller</li>
+<li>Adapters</li>
+<li>Callbacks and listeners</li>
+<li>Backend services</li>
+</ul>
+<h4>Libraries</h4>
+<ul>
+<li><code class="remark-inline-code">Butterknife</code> view-logic binding</li>
+<li><code class="remark-inline-code">OkHttp</code> (HTTP client)</li>
+<li><code class="remark-inline-code">Retrofit</code> (REST API clients)</li>
+</ul>
+<h4>Backend</h4>
+<ul>
+<li><code class="remark-inline-code">Service</code></li>
+<li>SQLite</li>
+<li>CPU and memory stats</li>
+<li>Filesystem</li>
+</ul>
+</td>
+
+<td>
+<h4>Views</h4>
+<ul>
+<li>Navigation drawer</li>
+<li>Bottom navigation tabs</li>
+<li>View pager</li>
+<li><code class="remark-inline-code">RecyclerView</code></li>
+<li><code class="remark-inline-code">MapView</code></li>
+<li><code class="remark-inline-code">TextureView</code></li>
+<li>"Sticky" playback view</li>
+</ul>
+<h4>Other</h4>
+<ul>
+<li>Audio playback</li>
+<li>Threading</li>
+<li>Mapping enums to ints</li>
+</ul>
+</td>
+
+</tr>
+</table>
+
+
+
+
+
+---
+# App #1: [Wikipedia](https://play.google.com/store/apps/details?id=org.wikipedia)
+
+<img src="images/feed.png" alt="Wikipedia app" style="width: 32%">
+<img src="images/lists.png" alt="Wikipedia app" style="width: 32%">
+<img src="images/nearby.png" alt="Wikipedia app" style="width: 32%">
+
+???
+
+It's a way to browse Wikipedia.
+
+---
+### Wikipedia backbone structure
+
+<table class="fragment-views">
+
+<tr>
+    <th>
+        Activity hierarchy
+    </th>
+    <th>
+        Views
+    </th>
+</tr>
+
+<tr>
+    <td>
+        <code>MainActivity</code>
+    </td>
+    <td>
+        <code>FrameLayout</code>
+    </td>
+</tr>
+<tr>
+    <td>
+        <code>&emsp;MainFragment</code>
+    </td>
+    <td>
+        <code>CoordinatorLayout</code><br>
+        <code>&emsp;NoSwipeViewPager (ViewPager)</code><br>
+        <code>NavTabLayout</code>
+    </td>
+</tr>
+<tr>
+    <td>
+        <code>&emsp;&emsp;FeedFragment</code>
+    </td>
+    <td>
+        <code>FeedView (RecyclerView)</code>
+    </td>
+</tr>
+<tr>
+    <td>
+        <code>&emsp;&emsp;ReadingListsFragment</code>
+    </td>
+    <td>
+        <code>RecyclerView</code>
+    </td>
+</tr>
+<tr>
+    <td>
+        <code>&emsp;&emsp;HistoryFragment</code>
+    </td>
+    <td>
+        <code>RecyclerView</code>
+    </td>
+</tr>
+<tr>
+    <td>
+        <code>&emsp;&emsp;NearbyFragment</code>
+    </td>
+    <td>
+        <code>MapView</code>
+    </td>
+</tr>
+
+</table>
+
+<br>
+<table class="fragment-views">
+<tr>
+    <th colspan="2">
+        Other classes
+    </th>
+</tr>
+<tr>
+    <td colspan="2">
+        <code>NavTab</code>
+    </td>
+</tr>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+???
+
+TODO:
+- General-purpose algo for reading code
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+
+
 
 ---
 # What this talk is about
@@ -156,23 +415,6 @@ Sourcegraph
 * Lots of code snippets => follow along locally!
 
 * View slides as reference you can refer back to later
-
----
-
-<div style="height: 100%; position: absolute; top: 30%;">
-Good artists copy. Great artists steal.
-<br><br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;—Picasso
-</div>
-
---
-
-<div style="height: 100%; position: absolute; top: 50%;">
-Good programmers know what to write.<br>
-Great ones know what to rewrite (and reuse).
-<br><br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;—Eric S. Raymond, *The Cathedral and the Bazaar*
-</div>
 
 
 
