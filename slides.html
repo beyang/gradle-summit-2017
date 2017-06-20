@@ -61,8 +61,11 @@
       a .hljs .hljs-string {
           color: #ffa8a8;
       }
+      a:visited {
+          color: #0010f5; /* always blue */
+      }
       a pre {
-          border: 2px solid #0000FF;
+          border: 2px solid #0010f5;
       }
 
       p.caption {
@@ -87,6 +90,9 @@
           padding: 0.2em 0.5em;
       }
 
+      a.small-font pre .remark-code {
+          font-size: 0.5em !important;
+      }
     </style>
 
   </head>
@@ -97,6 +103,18 @@ class: center, middle
 
 # Become a better Android developer
 ## with examples and patterns from open source
+
+???
+
+* Intro: 2 min
+
+* Wikipedia: 20 min
+
+* AnotherMonitor: 5 min
+
+* AntennaPod: 10 min
+
+* Gradle and code understanding tools: 5 min
 
 
 ---
@@ -160,7 +178,7 @@ Good artists copy. Great artists steal.
 * Threading
 * Persistent bottom view
 * Writing to filesystem
-* Mapping enums to ints
+* Checked conversion of enums to/from ints
 
 
 ---
@@ -1972,21 +1990,11 @@ public class HttpDownloader extends Downloader {
 * Threading
 * Persistent bottom view
 * Writing to filesystem
-* Mapping enums to ints
+* Checked conversion of enums to/from ints
 
 ???
 
-We just covered a bunch of practical examples of this Android functionality.
-
-Not covered, but could be:
-
-- How to use Fresco for efficient image memory management (TODO)
-
-NOTE: emphasize use of third-party libraries. This method generalizes
-to understanding almost any codebase.
-
-
-
+* Transition: 
 
 
 
@@ -2001,73 +2009,138 @@ to understanding almost any codebase.
 
 
 ---
-## Our code understanding process
+## Understanding code
 
-* is dialectic
+- Many ways to understand code, but some commonalities
 
-* feels conversational
+- Code is nodes and edges
 
-* is branching and backtracking
+- Understanding code means forward/backward traversal of code graph
 
-### It requires a tool that
-
-* gives you the abilities necessary to answer your own questions
-
-* is low mental overhead
-
-* lets you find and keep your place in code
+![Jump to def](images/j2d.png)
 
 
 ---
-## Code exploration tool primitives
+## Tools for understanding code should
 
-* Essential abilities
-    * Jump to def
-    * Find references
-    * Symbol search
-    * Text search (as a fallback)
+- Make it easy to traverse the graph
 
-* Low mental overhead
-  * *Just works* across dependency boundaries
+- Have low mental overhead ("just works")
 
-* Keep your place
-  * Hyperlinks
-  * Tabs or windows, buffer navigation
+- Let you "bookmark" key nodes or edges
+
+### Bread-and-butter abilities
+
+- Jump to def
+
+- Find refs
+
+- Symbol search
+
+- Text search
+
+
 
 
 ---
-## Code exploration tool examples
+class: center, middle
+### A "smart" code understanding tool should understand Gradle
 
-* IDE
+
+---
+## We need more tools that take "smartness" outside IDE
 
 * grep
 
+* IDE
+
 * Sourcegraph
 
-
----
-
-![Jump to def in Sourcegraph](images/j2d.png)
-
-
----
-### Good Java code exploration tools must understand Gradle
-
-- Seamless jump-to-def and find-refs
-
-- Dependency structure
 
 
 ---
 ### Understanding Gradle is hard
 
+Gradle can look declarative:
+<a href="https://sourcegraph.com/github.com/Goddchen/Android-Gradle-Examples/-/blob/Gradle%20Hello%20World/build.gradle">
+```gradle
+buildscript {
+	repositories {
+		mavenCentral()
+	}
+    ...
+}
+
+apply plugin: 'com.android.application'
+
+android {
+	compileSdkVersion 21
+	buildToolsVersion "21.0.2"
+	...
+}
+
+dependencies {
+    compile 'commons-io:commons-io:3.4'
+    compile 'org.jsoup:jsoup:1.9.2'
+}
+
+ext {
+    group = 'com.foo.bar'
+    version = '1.6-SNAPSHOT'
+}
+```
+</a>
+
+???
+
+But there's a problem.
+
 * Dynamically typed Turing-complete scripting language
 
 * Gradle scripts often take full advantage of this
 
-[TODO: column 1: simple gradle script]
+* All kinds of weird stuff
 
-[TODO: column 2: complex gradle script]
+
+---
+### Understanding Gradle is hard
+
+...but it's not.
+
+Dependencies depend on values of arbitrary variables:
+<a href="https://sourcegraph.com/github.com/mockito/mockito@1a1f598b0227a03dab6c5bc595db7072cfd5602c/-/blob/build.gradle#L60-65">
+```gradle
+dependencies {
+    compile libraries.bytebuddy, libraries.bytebuddyagent
+
+    compileOnly libraries.junit4, libraries.hamcrest
+    compile libraries.objenesis
+```
+</a>
+
+Artifact names can be defined anywhere:
+<a href="https://sourcegraph.com/github.com/Netflix/Hystrix@1460419e1800710d3845d0f92cf66760815496d4/-/blob/settings.gradle#L19-21">
+```gradle
+rootProject.name='hystrix'
+...
+project(':hystrix-contrib/hystrix-clj').name = 'hystrix-clj'
+```
+</a>
+
+Hard to reason about plugin side-effects:
+<a href="https://sourcegraph.com/github.com/Netflix/Hystrix@1460419e1800710d3845d0f92cf66760815496d4/-/blob/build.gradle#L28-33">
+```gradle
+subprojects {
+    apply plugin: 'nebula.netflixoss'
+    apply plugin: 'java'
+    apply plugin: 'nebula.provided-base'
+	apply plugin: 'nebula.compile-api'
+```
+
+???
+
+* We deal with a lot of these problems at Sourcegraph, because we have to make things "just work"
+
 
 
 ---
@@ -2075,7 +2148,7 @@ to understanding almost any codebase.
 
 Gradle maintainers:
 
-* Consider promoting stronger conventions.
+* Promote conventions and idioms.
 
 * Make Gradle seems more like "data" rather than "code".
 
@@ -2095,7 +2168,7 @@ Gradle users:
 1. Learn from these examples!  
 (Further reading: [20 open-source Android apps](https://blog.aritraroy.in/20-awesome-open-source-android-apps-to-boost-your-development-skills-b62832cf0fa4))
 
-1. Try out a Q&A-style approach to understanding code.
+1. A Q&A framework for learning by example.
 
 1. Use Gradle to build more tools for understanding code.
 
@@ -2295,7 +2368,8 @@ public class ContentProviderClient {
       var slideshow = remark.create({
           navigation: {
               scroll: false
-          }
+          },
+          slideNumberFormat: '%current%'
       });
     </script>
     <script>
