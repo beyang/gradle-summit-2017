@@ -58,6 +58,9 @@
       a .hljs .hljs-number {
           color: #d3f9d8;
       }
+      a .hljs .hljs-string {
+          color: #ffa8a8;
+      }
       a pre {
           border: 2px solid #0000FF;
       }
@@ -122,31 +125,9 @@ class: center, middle
 
 ???
 
-* View slides as a reference
+* Can refer to slides as reference later
 
-Whirlwind tour of how to Android with examples from open source. The
-goal is not that you understand how each and every example works, but
-that you know there exists an example and can use these slides later
-as a reference. What should you immediately take away from this talk?
-A process for leveraging open source to boost how much code you've
-seen.
-
-* The graph of code is a powerful resource you can use to grow your
-  own programming talents.
-
-* Sourcegraph is a semantic index of all the Java code in the world
-  designed to make it easier to explore.
-
-* Most of what you do when you build a conceptual model of code
-  reduces to walking forward and backward along the graph of code.
-
-* Because Sourcegraph indexes all this code and interfaces with a lot
-  of members in the Java community (both inside companies and in open
-  source), we've seen a lot of patterns and anti-patterns for what
-  works well.
-
-* Here's a sampling of the knowledge that the graph contains, curated
-  using our experience indexing it.
+* Sourcegraph
 
 ---
 
@@ -159,7 +140,7 @@ Good artists copy. Great artists steal.
 
 
 ---
-## Topics we'll cover in examples
+## Learning by example
 
 * Model-view-controller / model-view-adapter patterns
 * Using `Butterknife` to bind views to fields
@@ -774,9 +755,11 @@ And these map clearly onto what's present in the UI:
 ---
 ### How does the feed work?
 
-* How does it load and display cards efficiently?
+* Very smooth UX
 
-* How does it fetch data from the server?
+* Lazily fetches from server
+
+* Different types of cards
 
 <center>
     <img src="images/feed.png" style="width: 30%;">
@@ -784,9 +767,6 @@ And these map clearly onto what's present in the UI:
     <img src="images/feed_trending.png" style="width: 30%;">
 </center>
 
-???
-
-Different types of cards
 
 
 
@@ -808,23 +788,34 @@ public class FeedFragment extends Fragment implements BackPressedHandler {
     private final FeedAdapter.Callback feedCallback = new FeedCallback();
     private FeedScrollListener feedScrollListener = new FeedScrollListener();
     private OverflowCallback overflowCallback = new OverflowCallback();
-
     ...
-
     @Nullable @Override public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
         View view = inflater.inflate(R.layout.fragment_feed, container, false);
+
+        unbinder = ButterKnife.bind(this, view);
+        feedAdapter = new FeedAdapter<>(coordinator, feedCallback);
+        feedView.setAdapter(feedAdapter);
+        feedView.setCallback(feedCallback);
+        feedView.addOnScrollListener(feedScrollListener);
+
+        swipeRefreshLayout.setColorSchemeResources(R.color.foundation_blue);
+        swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
         ...
-    }
-
-    ...
-}
-
 ```
 </a>
 
 ???
 
+* Views: `SwipeRefreshLayout`, `FeedView`, feed header
+
+* Adapters: `FeedAdapter`
+
+* Callbacks and listeners
+
+* Other classes (models and data sources): `WikipediaApp`, `FeedCoordinator`
+
+* Butterknife usage again
 
 
 ---
@@ -868,36 +859,16 @@ Side note: the `RecyclerView`
 `RecyclerView`: "a flexible view for providing a limited window into a large data set."
 
 
----
-### How does is the feed initialized?
-
-`FeedFragment` wires up the view to adapter, callback, and scrollback listener.
-
-<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@5ed559f1e05e6e3379a427c49d52578a06b454d7/-/blob/app/src/main/java/org/wikipedia/feed/FeedFragment.java#L97-101">
-```java
-@Nullable @Override public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        ...
-        feedAdapter = new FeedAdapter<>(coordinator, feedCallback);
-        feedView.setAdapter(feedAdapter);
-        feedView.setCallback(feedCallback);
-        feedView.addOnScrollListener(feedScrollListener);
-}
-```
-</a>
-
-The callbacks handle user-triggered events from the view.
-
-The adapter provides view lifecycle handler methods and view data provider methods.
-
 
 ---
 ### Where are the card views created and updated?
 
+`RecyclerView` subclasses fetch data through a `RecyclerView.Adapter` subclass:
+
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/feed/view/FeedAdapter.java#L42-47">
 ```java
 public class FeedAdapter<T extends View & FeedCardView<?>> extends DefaultRecyclerAdapter<Card, T> {
-
     ...
-
     @Override public DefaultViewHolder<T> onCreateViewHolder(ViewGroup parent, int viewType) {
         return new DefaultViewHolder<>(newView(parent.getContext(), viewType));
     }
@@ -920,17 +891,52 @@ public class FeedAdapter<T extends View & FeedCardView<?>> extends DefaultRecycl
         }
     }
 ```
+</a>
 
 ???
 
-This follows the standard `RecyclerView` pattern.
+Standard `RecyclerView` pattern:
 
+* `onCreateViewHolder`: when new child view is created
+
+* `onBindViewHolder`: as the user scrolls
+
+* child views are recycled
+
+
+---
+### How do you customize card appearance?
+
+Child view (card) classes satisfy common interface:
+
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/feed/view/FeedCardView.java#L8-12:2">
+```java
+public interface FeedCardView<T extends Card> {
+    void setCard(@NonNull T card);
+    @Nullable T getCard();
+    void setCallback(@Nullable FeedAdapter.Callback callback);
+}
+```
+</a>
+
+The type of card is determined at runtime:
+<a href="">
+```java
+public class FeedAdapter<T extends View & FeedCardView<?>> extends DefaultRecyclerAdapter<Card, T> {
+    ...
+    @NonNull private T newView(@NonNull Context context, int viewType) {
+        //noinspection unchecked
+        return (T) CardType.of(viewType).newView(context);
+    }
+```
+</a>
 
 ---
 ### How do you customize card appearance?
 
 Different card view classes, identified by enum backed by `EnumCode`:
 
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/feed/model/CardType.java#L22:13-22:21">
 ```java
 public enum CardType implements EnumCode {
     SEARCH_BAR(0) {
@@ -957,53 +963,82 @@ public enum CardType implements EnumCode {
         @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
             return new FeaturedArticleCardView(ctx);
         }
-    },
 ```
+</a>
 
 
 ---
-### What is the "model" for a card?
+### What is the "model" for a card and where does it come from?
 
+`FeedAdapter` gives a `Card` instance to the view. `Card`s are provided by `FeedCoordinatorBase`.
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/feed/view/FeedAdapter.java#L46:27-46:43">
 ```java
 public class FeedAdapter<T extends View & FeedCardView<?>> extends DefaultRecyclerAdapter<Card, T> {
     ...
+    @NonNull private FeedCoordinatorBase coordinator;
+    ...
+    public FeedAdapter(@NonNull FeedCoordinatorBase coordinator, @Nullable Callback callback) {
+        super(coordinator.getCards());
+        ...
+    }
+    ...
     @Override public void onBindViewHolder(DefaultViewHolder<T> holder, int position) {
         Card item = item(position);
+        ...
+        ((FeedCardView<Card>) view).setCard(item);
 ```
+</a>
 
-### Where does it come from?
-
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/views/DefaultRecyclerAdapter.java#L9:23">
 ```java
 public abstract class DefaultRecyclerAdapter<T, V extends View> extends RecyclerView.Adapter<DefaultViewHolder<V>> {
+    public DefaultRecyclerAdapter(@NonNull List<T> items) {
+        this.items = items;
+    }
+    ...
     protected T item(int position) {
         return items.get(position);
     }
 ```
+</a>
 
-```java
-    public FeedAdapter(@NonNull FeedCoordinatorBase coordinator, @Nullable Callback callback) {
-        super(coordinator.getCards());
-```
+???
 
-```java
-    @NonNull private FeedCoordinatorBase coordinator;
-```
+* Now know how views are managed.
+
+* Now ask where does data come from?
+
+    * `onBindViewHolder` ->
+    * `DefaultRecyclerAdapter.item()` ->
+    * `FeedAdapter` constructor
+    * `FeedCoordinatorBase` field
 
 
 ---
 ### Where does the model fetch the data from?
 
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/feed/view/FeedAdapter.java#L33:54">
 ```java
 public abstract class FeedCoordinatorBase {
-
     ...
-
+    private FeedClient.Callback callback = new ClientRequestCallback();
+    ...
+    private void requestCard(@NonNull WikiSite wiki) {
+        if (pendingClients.isEmpty()) {
+            removeProgressCard();
+            return;
+        }
+        pendingClients.get(0).request(context, wiki, currentAge, callback);
+    }
+    ...
     private void appendCard(@NonNull Card card) {
         int progressPos = cards.indexOf(progressCard);
         insertCard(card, progressPos >= 0 ? progressPos : cards.size());
     }
 ```
+</a>
 
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/feed/FeedCoordinatorBase.java#L149:19-149:40">
 ```java
     private class ClientRequestCallback implements FeedClient.Callback {
         @Override public void success(@NonNull List<? extends Card> cardList) {
@@ -1015,23 +1050,37 @@ public abstract class FeedCoordinatorBase {
             requestNextCard(wiki);
         }
 ```
+</a>
 
-```java
-    private FeedClient.Callback callback = new ClientRequestCallback();
-```
+???
+
+* `requestCard` triggers remote request chain for card data
+
+* callback receives requests back and inserts data into model
+
+
 
 ---
 
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/feed/FeedCoordinator.java#L14-36:2">
 ```java
-    private void requestCard(@NonNull WikiSite wiki) {
-        if (pendingClients.isEmpty()) {
-            removeProgressCard();
-            return;
+class FeedCoordinator extends FeedCoordinatorBase {
+    ...
+    protected void buildScript(int age) {
+        if (age == 0) {
+            addPendingClient(new SearchClient());
+            addPendingClient(new AnnouncementClient());
         }
-        pendingClients.get(0).request(context, wiki, currentAge, callback);
+        addPendingClient(new AggregatedFeedContentClient());
+        addPendingClient(new ContinueReadingClient());
+        ...
     }
+}
 ```
+</a>
 
+Using [Retrofit](https://sourcegraph.com/github.com/square/retrofit/-/blob/README.md) to query REST API:
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/feed/aggregated/AggregatedFeedContentClient.java#L33:14-33:41">
 ```java
 public class AggregatedFeedContentClient implements FeedClient {
 
@@ -1049,33 +1098,91 @@ public class AggregatedFeedContentClient implements FeedClient {
         call.enqueue(new CallbackAdapter(cb, wiki, age));
     }
 ```
+</a>
 
 ???
 
-* `FeedCoordinatorBase` manages fetching and organizing cards from a remote data source.
+* Clients include many types of cards
+
+* Each client class offers good examples of how to query REST API
 
 * Example use of the Retrofit library. (A "type-safe HTTP client for Android" to expose a REST API as a Java interface).
 
 
+---
+### How does the feed work? (recap)
+
+<table class="fragment-views">
+
+<tr>
+    <th>
+        Activity hierarchy
+    </th>
+    <th>
+        Views
+    </th>
+</tr>
+
+<tr>
+    <td>
+        <code>FeedFragment</code>
+    </td>
+    <td>
+        <code>FeedView (RecyclerView)</code><br>
+        <code>FeedCardView</code>
+    </td>
+</tr>
+
+</table>
+
+<br>
+<table class="fragment-views">
+<tr>
+    <th colspan="2">
+        Other classes
+    </th>
+</tr>
+<tr>
+    <td colspan="2">
+        <code>CardType</code>
+    </td>
+</tr>
+<tr>
+    <td colspan="2">
+        <code>FeedAdapter</code>
+    </td>
+</tr>
+<tr>
+    <td colspan="2">
+        <code>FeedCoordinator</code>
+    </td>
+</tr>
+<tr>
+    <td colspan="2">
+        <code>FeedClient</code>
+    </td>
+</tr>
+
+</table>
+
+
+
 
 ---
 # How does the map work?
 
-<center><img src="images/nearby.png" style="width: 33%"></center>
+<center><img src="images/nearby.png" style="width: 37%"></center>
 
 
 ---
 # How does the map work?
 
-Let's take a look at the `NearbyFragment`,
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/nearby/NearbyFragment.java#L69:14-69:28">
 ```java
 public class NearbyFragment extends Fragment {
     ...
     @BindView(R.id.mapview) MapView mapView;
-```
-
-which conveniently has an `initializeMap` method.
-```java
+    ...
     private void initializeMap() {
         mapView.getMapAsync(new OnMapReadyCallback() {
             @Override
@@ -1092,22 +1199,36 @@ which conveniently has an `initializeMap` method.
                     }
                 });
 ```
+</a>
+
+???
+* `NearbyFragment.initializeMap()`
+
 
 ---
+### How does Wikipedia fetch data for the map?
 
-`initializeMap` calls `fetchNearbyPages`,
+`initializeMap` *calls* `fetchNearbyPages`,
+
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/nearby/NearbyFragment.java#L378:18">
 ```java
+public class NearbyFragment extends Fragment {
+    ...
     private void fetchNearbyPages() {
         final int fetchTaskDelayMillis = 500;
         mapView.removeCallbacks(fetchTaskRunnable);
         mapView.postDelayed(fetchTaskRunnable, fetchTaskDelayMillis);
     }
 ```
-and this invokes `fetchTaskRunnable`.
+</a>
+*calls* `fetchTaskRunnable`.
+
 
 ---
 
-This, in turn, runs `client.request(...)` in the background, where `client` is an instance of `NearbyClient`.
+`fetchTaskRunnable` *calls* `client.request` in background, `client` an instance of `NearbyClient`:
+
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/nearby/NearbyFragment.java#L384:22-384:39">
 ```java
     private Runnable fetchTaskRunnable = new Runnable() {
         @Override
@@ -1132,10 +1253,14 @@ This, in turn, runs `client.request(...)` in the background, where `client` is a
                             onLoaded();
                         }
 ```
+</a>
+
+
 
 ---
 
 `NearbyClient` wraps an instance of `MwCachedService`,
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/nearby/NearbyClient.java#L21:7-21:19">
 ```java
 class NearbyClient {
     ...
@@ -1148,8 +1273,10 @@ class NearbyClient {
     }
 }
 ```
+</a>
 
 which returns an instance of `Retrofit`,
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/dataclient/retrofit/MwCachedService.java#L7:14-7:29">
 ```java
 public class MwCachedService<T> extends WikiCachedService<T> {
     public MwCachedService(@NonNull Class<T> clazz) {
@@ -1161,10 +1288,12 @@ public class MwCachedService<T> extends WikiCachedService<T> {
     }
 }
 ```
+</a>
 
 ---
 
-which is constructed by a `RetrofitFactory` instance.
+`RetrofitFactory` constructs `Retrofit` instances:
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/dataclient/retrofit/RetrofitFactory.java#L18:20-18:35">
 ```java
 public final class RetrofitFactory {
     public static Retrofit newInstance(@NonNull WikiSite wiki) {
@@ -1180,17 +1309,15 @@ public final class RetrofitFactory {
                 .build();
     }
 ```
-
-???
-
-This is another good example of how to use `Retrofit` in the wild.
+</a>
 
 
 ---
-### How do we test the backend client?
+### How is the REST client tested?
 
-Use Mockito to mock backend API endpoints in API client tests:
+Mockito used to mock API endpoints in tests:
 
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/test/java/org/wikipedia/nearby/NearbyClientTest.java#L26:14-26:30">
 ```java
 import static org.mockito.Mockito.mock;
 
@@ -1209,7 +1336,7 @@ public class NearbyClientTest extends MockWebServerTest {
         assertCallbackSuccess(call, cb);
     }
 ```
-([source](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/test/java/org/wikipedia/nearby/NearbyClientTest.java?q=onData#L26:14-26:30))
+</a>
 
 
 <!-- --- -->
@@ -1250,39 +1377,18 @@ public class NearbyClientTest extends MockWebServerTest {
 
 
 ---
-## AnotherMonitor topics of interest
+## AnotherMonitor features of interest
 
-* How do you get CPU and memory usage?
+* Recording CPU and memory usage
 
-* How do you display a nice chart?
+* Drawing the chart
 
 ---
-## Where's the "main" function?
+### Where's the "main" function?
+<a href="https://sourcegraph.com/github.com/AntonioRedondo/AnotherMonitor@8b7fc67af9216ccdd3209cc014901b12efb5da3e/-/blob/AnotherMonitor/src/main/java/org/anothermonitor/ActivityMain.java#L246:14-246:22">
 ```java
 public class ActivityMain extends Activity {
     ...
-	public void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-		startService(new Intent(this, ServiceReader.class));
-		setContentView(R.layout.activity_main);
-
-		mPrefs = getSharedPreferences(getString(R.string.app_name) + C.prefs, MODE_PRIVATE);
-		...
-    }
-    ...
-}
-```
-([source](https://sourcegraph.com/github.com/AntonioRedondo/AnotherMonitor@8b7fc67af9216ccdd3209cc014901b12efb5da3e/-/blob/AnotherMonitor/src/main/java/org/anothermonitor/ActivityMain.java#L246:14-246:22))
-
-???
-
-* Looking for `ActivityMain.onCreate`
-* Search for that in your favorite code searcher or IDE
-
----
-## What's done on initialization?
-
-```java
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		startService(new Intent(this, ServiceReader.class));
@@ -1304,15 +1410,26 @@ public class ActivityMain extends Activity {
 		...
     }
 ```
-([source](https://sourcegraph.com/github.com/AntonioRedondo/AnotherMonitor@8b7fc67af9216ccdd3209cc014901b12efb5da3e/-/blob/AnotherMonitor/src/main/java/org/anothermonitor/ActivityMain.java#L246:14-246:22))
+</a>
+
+???
+
+* Look for `ActivityMain.onCreate` again
+
+* `ServiceReader` class might be recorder service
+
+* wires up views to listeners
+  * `findViewById`, instead of using Butterknife
+
+* `ViewGraphic` class
 
 
 ---
-### How does it render this data in the chart view?
+### How does it render this data in a chart?
 
-`TextureView`: special hardware-accelerated view, can be rendered in
-separate thread.
+`ViewGraphic` extends `TextureView` (for content streams like video or 3D)
 
+<a href="https://sourcegraph.com/github.com/AntonioRedondo/AnotherMonitor@8b7fc67af9216ccdd3209cc014901b12efb5da3e/-/blob/AnotherMonitor/src/main/java/org/anothermonitor/ViewGraphic.java#L29:14-29:25">
 ```java
 public class ViewGraphic extends TextureView {
 	private boolean graphicInitialised,
@@ -1329,18 +1446,19 @@ public class ViewGraphic extends TextureView {
     ...
 }
 ```
-([source](https://sourcegraph.com/github.com/AntonioRedondo/AnotherMonitor@8b7fc67af9216ccdd3209cc014901b12efb5da3e/-/blob/AnotherMonitor/src/main/java/org/anothermonitor/ViewGraphic.java#L29:14-29:25))
+</a>
 
 ???
 
-* `TextureView` used when hardware acceleration is desired... overkill?
+* `TextureView`: special hardware-accelerated view, can be rendered in
+  separate thread.
 
 
 ---
-### How does it render this data in the chart view?
+### How does it render this data in a chart?
 
-View update logic spread across 2 classes:
-
+View update logic spread across 2 classes. Anti-pattern?
+<a href="https://sourcegraph.com/github.com/AntonioRedondo/AnotherMonitor@8b7fc67af9216ccdd3209cc014901b12efb5da3e/-/blob/AnotherMonitor/src/main/java/org/anothermonitor/ActivityMain.java#L115-127">
 ```java
 public class ActivityMain extends Activity {
     ...
@@ -1367,10 +1485,20 @@ public class ActivityMain extends Activity {
 								Log.w("Activity main: ", e.getMessage());
 							}
 ```
+</a>
+
+???
+
+* `canvas = mVG.lockCanvas()`
+
+* `mVG.onDrawCustomized(canvas, mThread)`
+
+
 
 ---
-### How does it render this data in the chart view?
+### How does it render this data in a chart?
 
+<a href="https://sourcegraph.com/github.com/AntonioRedondo/AnotherMonitor@8b7fc67af9216ccdd3209cc014901b12efb5da3e/-/blob/AnotherMonitor/src/main/java/org/anothermonitor/ViewGraphic.java#L29:14-29:25">
 ```java
 public class ViewGraphic extends TextureView {
     ...
@@ -1394,10 +1522,19 @@ public class ViewGraphic extends TextureView {
 	}
 }
 ```
+</a>
+
+???
+
+* `mVG.onDrawCustomized(canvas, mThread)` draws to canvas on the thread
+
+
 
 ---
 ### Where does CPU and memory data come from?
 
+`ServiceReader` class provides CPU and memory data to views:
+<a href="https://sourcegraph.com/github.com/AntonioRedondo/AnotherMonitor@8b7fc67af9216ccdd3209cc014901b12efb5da3e/-/blob/AnotherMonitor/src/main/java/org/anothermonitor/ActivityMain.java#L88:19">
 ```java
 public class ActivityMain extends Activity {
 	...
@@ -1415,11 +1552,15 @@ public class ActivityMain extends Activity {
 				setTextLabelMemory(mTVCached, mTVCachedP, mSR.getCached());
 				setTextLabelMemory(mTVThreshold, mTVThresholdP, mSR.getThreshold());
 ```
-([source](https://sourcegraph.com/github.com/AntonioRedondo/AnotherMonitor@8b7fc67af9216ccdd3209cc014901b12efb5da3e/-/blob/AnotherMonitor/src/main/java/org/anothermonitor/ActivityMain.java#L97-98))
+</a>
+
+
 
 ---
 ### Where does CPU and memory data come from? (continued)
 
+`ServiceReader` reads stats on a background thread:
+<a href="https://sourcegraph.com/github.com/AntonioRedondo/AnotherMonitor@8b7fc67af9216ccdd3209cc014901b12efb5da3e/-/blob/AnotherMonitor/src/main/java/org/anothermonitor/ServiceReader.java#L53:14-53:27">
 ```java
 public class ServiceReader extends Service {
 	...
@@ -1445,11 +1586,19 @@ public class ServiceReader extends Service {
 	...
 }
 ```
+</a>
+
+???
+
+* `readThread` (at bottom)
+
 
 
 ---
 ### Where does CPU and memory data come from? (continued)
 
+Android is just Linux:
+<a href="https://sourcegraph.com/github.com/AntonioRedondo/AnotherMonitor@8b7fc67af9216ccdd3209cc014901b12efb5da3e/-/blob/AnotherMonitor/src/main/java/org/anothermonitor/ServiceReader.java#L259:15-259:19">
 ```java
 public class ServiceReader extends Service {
 	...
@@ -1473,13 +1622,25 @@ public class ServiceReader extends Service {
 		...
     }
 ```
-([source](https://sourcegraph.com/github.com/AntonioRedondo/AnotherMonitor@8b7fc67af9216ccdd3209cc014901b12efb5da3e/-/blob/AnotherMonitor/src/main/java/org/anothermonitor/ServiceReader.java#L259:15-259:19))
+</a>
+
+???
+
+* /proc/meminfo
+
 
 
 ---
 # App #3: [AntennaPod](http://antennapod.org/)
 
-A medium-sized open-source podcast app.
+<img src="images/pod/main.png" style="width: 32%; box-shadow: 0 0 7px 0 gray;">
+<img src="images/pod/menu.png" style="width: 32%; box-shadow: 0 0 7px 0 gray;">
+<img src="images/pod/playback.png" style="width: 32%; box-shadow: 0 0 7px 0 gray;">
+
+---
+# App #3: [AntennaPod](http://antennapod.org/)
+
+A medium-sized [open-source](https://sourcegraph.com/github.com/AntennaPod/AntennaPod/-/blob/README.md) podcast app.
 
 * 356 Java files
 
@@ -1489,10 +1650,6 @@ A medium-sized open-source podcast app.
 
 * 1,577 GitHub stars
 
-<img src="images/pod/main.png" style="width: 23%; box-shadow: 0 0 7px 0 gray;">
-<img src="images/pod/menu.png" style="width: 23%; box-shadow: 0 0 7px 0 gray;">
-<img src="images/pod/playback.png" style="width: 23%; box-shadow: 0 0 7px 0 gray;">
-<img src="images/pod/episodes.png" style="width: 23%; box-shadow: 0 0 7px 0 gray;">
 
 
 ---
@@ -1846,6 +2003,17 @@ Gradle users:
 
 1. Build smart tools that speak Gradle.
 
+
+???
+
+1. Open source = gold mine of examples and knowledge waiting for
+   someone with the right tools to take advantage of it.
+
+1. Try out the Q&A method when diving into your next codebase.
+
+1. Think about building tools with Gradle that aren't just about
+   building and packaging things, but are about helping humans figure
+   out what's going on.
 
 ---
 # Contact me
