@@ -58,6 +58,31 @@
       a .hljs .hljs-number {
           color: #d3f9d8;
       }
+      a pre {
+          border: 2px solid #0000FF;
+      }
+
+      p.caption {
+          margin-bottom: -1em !important;
+          font-size: small;
+      }
+
+      ::-webkit-scrollbar { 
+          display: none; 
+      }
+
+      table.fragment-views {
+          border-collapse: collapse;
+          width: 100%;
+      }
+      table.fragment-views tr {
+          vertical-align: top;
+      }
+      table.fragment-views td,th {
+          border: 1px solid gray;
+          width: 50%;
+          padding: 0.2em 0.5em;
+      }
 
     </style>
 
@@ -80,14 +105,6 @@ class: center, middle
 
 
 ---
-
-<div style="height: 100%; position: absolute; top: 30%;">
-Good artists copy. Great artists steal.
-<br><br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;—Picasso
-</div>
-
----
 # What this talk is about
 
 * **Examples** from 3 open-source Android apps
@@ -97,7 +114,15 @@ Good artists copy. Great artists steal.
 
 * A **tool** built with Gradle to accelerate this process
 
+<br>
+<center>
+<h2>Follow along:</h2>
+<h2>[TODO: insert bit.ly URL]</h2>
+</center>
+
 ???
+
+* View slides as a reference
 
 Whirlwind tour of how to Android with examples from open source. The
 goal is not that you understand how each and every example works, but
@@ -124,22 +149,36 @@ seen.
   using our experience indexing it.
 
 ---
+
+<div style="height: 100%; position: absolute; top: 30%;">
+Good artists copy. Great artists steal.
+<br><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;—Picasso
+</div>
+
+
+
+---
 ## Topics we'll cover in examples
 
 * Model-view-controller / model-view-adapter patterns
-* Using `Butterknife` to bind views
+* Using `Butterknife` to bind views to fields
 * Navigation drawer and `DrawerLayout`
-* `RecyclerView` for data feeds
 * `BottomNavigationView`
-* `MapView`
+* Navigation tabs and `ViewPager`
+* `RecyclerView` for data feeds and lists
+* Maps and `MapView`
 * `TextureView`
+* Audio playback
 * HTTP requests (via OkHttp)
 * REST API clients (via Retrofit)
 * Mocking HTTP client via `Mockito`
 * Persisting data to a SQLite database
 * Read low-level system stats
+* Threading
 * Persistent bottom view
 * Writing to filesystem
+* Mapping enums to ints
 
 
 ---
@@ -174,13 +213,6 @@ If the Wikipedia app were a book, it'd be half the length of *Moby Dick*.<sup>*<
 
 ## *Where are the Spark Notes?*
 
-???
-
-IMPORTANT: At this point, ask everyone to pull out their Android
-phones, download the Wikipedia app and visit the slides link to follow
-along. Make people follow along. Point out that the links to source
-code should be followed, and folks should stay in the source code (and
-only refer back to the slides if they get lost).
 
 <!-- --- -->
 <!-- # Ways to dive into code -->
@@ -238,17 +270,23 @@ only refer back to the slides if they get lost).
 
 
 ---
-# Turn it into a conversation
+# General-purpose algorithm for reading code
 
-1. Ask a question of interest.
+--
 
-1. Find the answer.*
+1. Ask a question about how something works.
+
+1. Figure out the answer.*
 
 1. Repeat.
 
-
 .footer[\* You should understand the answer well enough that implementing it yourself would be "due diligence."]
 
+--
+
+<center>
+<strong>Always have a question in mind you're trying to answer.</strong>
+</center>
 
 ???
 
@@ -261,11 +299,11 @@ in teaching students as a T.A.
 
 ### Some "icebreaker" questions:
 
-1. Where's your "main" function?
+1. How does it arrive at its initial state?
 
-1. How do you arrive at your initial state?
+1. Where's the "main" function?
 
-1. What options do you present to the user from there?
+1. What options does it present to the user after initialization?
 
 ???
 
@@ -274,18 +312,15 @@ Just like a conversation with a person, there are a few standard
 
 
 ---
-### Wikipedia, where's your "main" function?
+### Wikipedia: how does it arrive at its initial state?
 
-???
-
-* Any Android developer knows that Android apps are built around
-  "activities."
-
-* Main activity is called `MainActivity`. The initializer method for
-  an `Activity` instance is `onCreate`, so let's start there.
+<center>
+<img src="images/feed.png" alt="Wikipedia app" style="width: 40%">
+</center>
 
 
---
+---
+### Wikipedia: where's the "main" function?
 
 Looking for something like:
 
@@ -297,31 +332,40 @@ public class MainActivity {
 }
 ```
 
+???
+
+* Any Android developer knows that Android apps are built around
+  "activities."
+
+* Main activity is called `MainActivity`. The initializer method for
+  an `Activity` instance is `onCreate`, so let's start there.
+
 --
 
-Search for the main activity:
+Search for the main activity class:
 
 [![symbol search for "activity"](images/search_activity.png)](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/main/MainActivity.java#L13:14-13:26)
 
 
----
-### Wikipedia, how do you arrive at your initial state?
 
-`MainActivity` itself doesn't tell us, but it's a subclass, so let's
-walk up its inheritance tree:
+---
+### Wikipedia: how does it arrive at its initial state? (continued)
+
+No `MainActivity.onCreate` method, so let's walk up its inheritance
+tree:
 
 <a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/main/MainActivity.java#L13-14">
 ```java
 public class MainActivity extends SingleFragmentToolbarActivity<MainFragment>
 ```
 </a>
-
+&emsp;*extends*
 <a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/activity/SingleFragmentToolbarActivity.java#L15:23">
 ```java
 public abstract class SingleFragmentToolbarActivity<T extends Fragment> extends SingleFragmentActivity<T> {
 ```
 </a>
-
+&emsp;*extends*
 <a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/activity/SingleFragmentActivity.java#L14:23">
 ```java
 public abstract class SingleFragmentActivity<T extends Fragment> extends ThemedActionBarActivity {
@@ -335,9 +379,19 @@ public abstract class SingleFragmentActivity<T extends Fragment> extends ThemedA
         }
     }
 ```
+???
+
+* No `MainActivity.onCreate`
+
+* Inheritance tree
+
+* `FragmentManager`
+
+* `createFragment()`
+
 
 ---
-### Wikipedia, how do you arrive at your initial state? (continued)
+### Wikipedia: how does it arrive at its initial state? (continued)
 
 <a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/main/MainActivity.java#L20-23">
 ```java
@@ -349,56 +403,200 @@ public class MainActivity extends SingleFragmentToolbarActivity<MainFragment>
     }
 ```
 </a>
+*creates new instance of `MainFragment`*
+
+---
+### Wikipedia: how does it arrive at its initial state? (continued)
+
+`MainFragment.onCreateView` wires up the tab bar to the view pager:
 
 <a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/main/MainFragment.java#L101-123:6">
 ```java
-public class MainFragment extends Fragment implements BackPressedHandler, FeedFragment.Callback,
-        NearbyFragment.Callback, HistoryFragment.Callback, SearchFragment.Callback,
-        LinkPreviewDialog.Callback {
-	...
+public class MainFragment extends Fragment implements BackPressedHandler, FeedFragment.Callback, NearbyFragment.Callback, HistoryFragment.Callback, SearchFragment.Callback, LinkPreviewDialog.Callback {
+
+    @BindView(R.id.fragment_main_view_pager) ViewPager viewPager;
+    @BindView(R.id.fragment_main_nav_tab_layout) NavTabLayout tabLayout;
+    ...
+
     @Nullable @Override public View onCreateView(LayoutInflater inflater,
                                                  @Nullable ViewGroup container,
                                                  @Nullable Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
         View view = inflater.inflate(R.layout.fragment_main, container, false);
         unbinder = ButterKnife.bind(this, view);
+
+        viewPager.setAdapter(new NavTabFragmentPagerAdapter(getChildFragmentManager()));
+        tabLayout.setOnNavigationItemSelectedListener(new BottomNavigationView.OnNavigationItemSelectedListener() {
+            @Override
+            public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+                viewPager.setCurrentItem(item.getOrder());
+                return true;
+            }
+        });
 ```
 </a>
 
 ???
 
-
----
-### Wikipedia, how do you arrive at your initial state? (continued)
+* `createFragment() -> MainFragment`
 
 * `MainFragment.onCreateView`
-```java
-        View view = inflater.inflate(R.layout.fragment_main, container, false);
-        unbinder = ButterKnife.bind(this, view);
-```
-* *references* `resources/fragment_main.xml`
+
+    * "inflates" view from XML
+
+    * Butterknife
+      * `@BindView`
+      * `Butterknife.bind`
+
+    * wires up both a `ViewPager` view and a `NavTabLayout (BottomNavigationView)` view
+
+* The `ViewPager` instance gets its view from the `NavTabLayout` instance, so let's 
+
+---
+### Wikipedia: how does it arrive at its initial state? (continued)
+
+`MainFragment.onCreateView` *inflates view from* `resources/fragment_main.xml`
+
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/res/layout/fragment_main.xml#L28-37">
 ```xml
         <org.wikipedia.navtab.NavTabLayout
 ```
-* *references* `NavTabLayout`
+</a>
+
+*references* `NavTabLayout.java`
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/navtab/NavTabLayout.java#L25-30:6">
 ```java
+public class NavTabLayout extends BottomNavigationView {
+    ...
     private void setTabViews() {
         for (int i = 0; i < NavTab.size(); i++) {
             NavTab navTab = NavTab.of(i);
             getMenu().add(Menu.NONE, i, i, navTab.text()).setIcon(navTab.icon());
         }
+    }
 ```
-* *calls* `NavTab.of`
-* *references* `NavTab.EXPLORE`
-* *references* `FeedFragment.newInstance`
+</a>
 
+*calls* `NavTab.of`
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/navtab/NavTab.java#L43-45:6">
+```java
+    @NonNull public static NavTab of(int code) {
+        return MAP.get(code);
+    }
+
+```
+</a>
+
+
+---
+### Wikipedia: how does it arrive at its initial state? (continued)
+
+*references* `NavTab.EXPLORE`
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/navtab/NavTab.java#L16-21:7">
+```java
+public enum NavTab implements EnumCode {
+    EXPLORE(R.string.nav_item_feed, R.drawable.ic_globe) {
+        @NonNull @Override public Fragment newInstance() {
+            return FeedFragment.newInstance();
+        }
+    },
+```
+</a>
+
+*references* `FeedFragment.newInstance`
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/feed/FeedFragment.java#L75-76">
+```java
+    @NonNull public static FeedFragment newInstance() {
+```
+</a>
+
+
+---
+### Wikipedia: how does it arrive at its initial state? (recap)
+
+<table class="fragment-views">
+
+<tr>
+    <th>
+        Activity hierarchy
+    </th>
+    <th>
+        Views
+    </th>
+</tr>
+
+<tr>
+    <td>
+        <code>MainActivity</code>
+    </td>
+    <td>
+        <code>FrameLayout</code>
+    </td>
+</tr>
+<tr>
+    <td>
+        <code>&emsp;MainFragment</code>
+    </td>
+    <td>
+        <code>CoordinatorLayout</code><br>
+        <code>&emsp;NoSwipeViewPager (ViewPager)</code><br>
+        <code>NavTabLayout</code>
+    </td>
+</tr>
+<tr>
+    <td>
+        <code>&emsp;&emsp;FeedFragment</code>
+    </td>
+    <td>
+        <code>FeedView (RecyclerView)</code>
+    </td>
+</tr>
+<tr>
+    <td>
+        <code>&emsp;&emsp;ReadingListsFragment</code>
+    </td>
+    <td>
+        <code>RecyclerView</code>
+    </td>
+</tr>
+<tr>
+    <td>
+        <code>&emsp;&emsp;HistoryFragment</code>
+    </td>
+    <td>
+        <code>RecyclerView</code>
+    </td>
+</tr>
+<tr>
+    <td>
+        <code>&emsp;&emsp;NearbyFragment</code>
+    </td>
+    <td>
+        <code>MapView</code>
+    </td>
+</tr>
+
+</table>
+
+<br>
+<table class="fragment-views">
+<tr>
+    <th colspan="2">
+        Other classes
+    </th>
+</tr>
+<tr>
+    <td colspan="2">
+        <code>NavTab</code>
+    </td>
+</tr>
+</table>
 
 ---
 
 Note the use
-of [Butterknife](https://github.com/JakeWharton/butterknife)
-to
-[bind view objects to fields in the fragments](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/main/MainFragment.java#L106:32-106:36).
+of [Butterknife](https://github.com/JakeWharton/butterknife) to bind
+view objects to fields in the fragments.
 
 <a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/main/MainFragment.java#L74:14-74:26">
 ```java
@@ -432,6 +630,51 @@ public class MainFragment extends Fragment implements BackPressedHandler, FeedFr
 }
 ```
 </a>
+
+???
+
+* Calls to `ButterKnife.bind` replace `findViewById` boilerplate
+
+
+---
+### EnumCode: checked conversion of ints to enums
+
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/model/EnumCode.java#L3:18-3:26">
+```java
+public interface EnumCode {
+    int code();
+}
+```
+</a>
+
+Pattern used in 16 files, including:
+
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/database/http/HttpStatus.java#L9:35-9:43">
+```java
+public enum HttpStatus implements EnumCode {
+
+    SYNCHRONIZED(0),
+
+    OUTDATED(1),
+
+    MODIFIED(2),
+
+    ...
+    
+    private static final EnumCodeMap<HttpStatus> MAP = new EnumCodeMap<>(HttpStatus.class);
+
+    private final int code;
+
+    @NonNull
+    public static HttpStatus of(int code) {
+        return MAP.get(code);
+    }
+
+    ...
+```
+</a>
+
+
 
 ---
 ### What can the user do from here?
@@ -473,79 +716,22 @@ public enum NavTab implements EnumCode {
 
 And these map clearly onto what's present in the UI:
 
+<center>
 <img src="images/navbar.png" style="width: 35%;">
+</center>
 
-
----
-### Side note: EnumCode for checked conversion of ints to enums
-
-<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/model/EnumCode.java#L3:18-3:26">
-```java
-public interface EnumCode {
-    int code();
-}
-```
-</a>
-
-<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/database/http/HttpStatus.java#L9:35-9:43">
-```java
-public enum HttpStatus implements EnumCode {
-
-    SYNCHRONIZED(0),
-
-    OUTDATED(1),
-
-    MODIFIED(2),
-
-    ...
-    
-    private static final EnumCodeMap<HttpStatus> MAP = new EnumCodeMap<>(HttpStatus.class);
-
-    private final int code;
-
-    @NonNull
-    public static HttpStatus of(int code) {
-        return MAP.get(code);
-    }
-
-    ...
-```
-</a>
 
 
 ---
-# Overall application structure
+# Where to go from here?
 
-We now know what the backbone classes are in the Wikipedia app:
+1. How does the **feed** work?
 
-```
+1. How do the **reading lists** work?
 
-                          MainActivity
-                               |
-                               v
-                          MainFragment
-                               |
-      _________________________v_________________________
-     |                |                  |               |
-     v                v                  v               v
-FeedFragment  ReadingListsFragment  HistoryFragment  NearbyFragment
-```
+1. How does the **map** work?
 
-???
-
-Now you have a picture of the app in broad strokes.
-
-
----
-# Let's continue the conversation
-
-1. How does the feed work?
-
-1. How do the reading lists work?
-
-1. How does the map work?
-
-1. How is this app tested?
+1. How is this app **tested**?
 
 ???
 
@@ -994,16 +1180,16 @@ public class NearbyClientTest extends MockWebServerTest {
 ([source](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/test/java/org/wikipedia/nearby/NearbyClientTest.java?q=onData#L26:14-26:30))
 
 
----
-## Wikipedia, the SparkNotes
+<!-- --- -->
+<!-- ## Wikipedia, the SparkNotes -->
 
-- `NavTab`-based app built around 4 main `Fragment` subclasses
+<!-- - `NavTab`-based app built around 4 main `Fragment` subclasses -->
 
-- Subclasses `RecyclerView` and `RecyclerView.Adapter` for efficient table-based views
+<!-- - Subclasses `RecyclerView` and `RecyclerView.Adapter` for efficient table-based views -->
 
-- Uses `MapView` for the map
+<!-- - Uses `MapView` for the map -->
 
-- Uses OkHttp and Retrofit for calls to Wikipedia API, Mockito to test this
+<!-- - Uses OkHttp and Retrofit for calls to Wikipedia API, Mockito to test this -->
 
 ---
 # App #2: [AnotherMonitor](https://play.google.com/store/apps/details?id=org.anothermonitor)
@@ -1054,8 +1240,12 @@ public class ActivityMain extends Activity {
     ...
 }
 ```
-
 ([source](https://sourcegraph.com/github.com/AntonioRedondo/AnotherMonitor@8b7fc67af9216ccdd3209cc014901b12efb5da3e/-/blob/AnotherMonitor/src/main/java/org/anothermonitor/ActivityMain.java#L246:14-246:22))
+
+???
+
+* Looking for `ActivityMain.onCreate`
+* Search for that in your favorite code searcher or IDE
 
 ---
 ## What's done on initialization?
@@ -1457,29 +1647,24 @@ public class HttpDownloader extends Downloader {
 ---
 ## Recap
 
-- How to wire up a `NavTab`-based app.
-
-- How to use `RecyclerView` effectively to make an efficient view for a stream of data (`FeedView`)
-
-- How to persist data to a SQLite database (`Database`)
-
-- How to use OkHttp and Retrofit to manage HTTP API requests
-
-- How to use Butterknife
-
-- How to use Mockito to mock HTTP client classes
-
-- Built intuition about Android's flavor of MVC
-
-- Use of `TextureView`
-
-- Use of `DrawerLayout` to create a Navigation Drawer UI
-
-- Reading low-level CPU and memory stats
-
-- Downloading content to files
-
-- Persistent audio playback view
+* Model-view-controller / model-view-adapter patterns
+* Using `Butterknife` to bind views to fields
+* Navigation drawer and `DrawerLayout`
+* `BottomNavigationView`
+* Navigation tabs and `ViewPager`
+* `RecyclerView` for data feeds and lists
+* Maps and `MapView`
+* `TextureView`
+* Audio playback
+* HTTP requests (via OkHttp)
+* REST API clients (via Retrofit)
+* Mocking HTTP client via `Mockito`
+* Persisting data to a SQLite database
+* Read low-level system stats
+* Threading
+* Persistent bottom view
+* Writing to filesystem
+* Mapping enums to ints
 
 ???
 
