@@ -103,6 +103,9 @@ class: center, middle
 # Become a better Android developer
 ## with examples and patterns from open source
 
+<h3><a href="https://beyang.github.io/gradle-summit-2017">beyang.github.io/gradle-summit-2017</a></h3>
+
+
 ???
 
 * Intro: 2 min
@@ -134,11 +137,25 @@ Sourcegraph
 
 * indexes all of open source, makes it easy to dive in
 
+Tell me about you (audience):
+
+* How many are Android newbies?
+
+* How many people are experienced Android developers?
+
+* How do you feel about the quality of your Android codebase?
+
 
 
 ---
-class: middle,center
-### When was the last time you went and understood a large chunk of code that you didn't write?
+class: center
+
+<br><br><br><br><br><br>
+### When was the last time you had to understand a large chunk of code that you didn't write?
+
+--
+
+### Did you enjoy it?
 
 ???
 
@@ -150,11 +167,11 @@ We don't take full advantage of the amazing corpus of open-source code that's av
 ---
 # How to learn from examples
 
-* Process for learning from existing code
+> ### Process for understanding existing code
 
-* Actual code examples from open source
+> ### Actual code examples from open source
 
-* Tool for accelerating the process
+> ### Tool for accelerating the process
 
 
 
@@ -164,23 +181,9 @@ class: center,middle
 
 
 ---
-# 3 apps
-
-<img src="images/feed.png" style="width: 32%">
-<img src="images/monitor/main.png" style="width: 32%">
-<img src="images/pod/main.png" style="width: 32%">
-
-<center>
-Wikipedia
-&emsp;&emsp;&emsp;&emsp;&emsp;
-AnotherMonitor
-&emsp;&emsp;&emsp;&emsp;&emsp;
-AntennaPod
-</center>
-
-
----
 # 3 codebases
+
+--
 
 * 2,500 GitHub stars
 
@@ -200,7 +203,8 @@ AntennaPod
 
 <br>
 <center>
-<h1><em>None of which I wrote!</em></h1>
+<h1><em>None of which I wrote</em></h1>
+<h3>¯\_(ツ)_/¯</h3>
 </center>
 
 ???
@@ -209,8 +213,26 @@ At the end, we'll talk about how Gradle can be a foundational building
 block for tools for understanding code, not just building and
 packaging it.
 
+
 ---
-## Learning Android by example
+# 3 apps
+
+<img src="images/feed.png" style="width: 32%">
+<img src="images/monitor/main.png" style="width: 32%">
+<img src="images/pod/main.png" style="width: 32%">
+
+<center>
+Wikipedia
+&emsp;&emsp;&emsp;&emsp;&emsp;
+AnotherMonitor
+&emsp;&emsp;&emsp;&emsp;&emsp;
+AntennaPod
+</center>
+
+
+
+---
+## Android by example
 
 <table><tr style="vertical-align: top;">
 
@@ -264,7 +286,7 @@ packaging it.
 
 
 ---
-# App #1: [Wikipedia](https://play.google.com/store/apps/details?id=org.wikipedia)
+# App #1: [Wikipedia](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia)
 
 <img src="images/feed.png" alt="Wikipedia app" style="width: 32%">
 <img src="images/lists.png" alt="Wikipedia app" style="width: 32%">
@@ -283,13 +305,12 @@ It's a way to browse Wikipedia.
 ---
 class: center
 
-<br><br><br><br>
+<br><br><br><br><br><br>
 ## How do we discover the backbone?
 
 --
 
-<br><br>
-## Ask: What does this app do on initialization?
+## Ask: "What does this app do on initialization?"
 
 ---
 ### Wikipedia: how does it arrive at its initial state?
@@ -900,7 +921,7 @@ public class AggregatedFeedContentClient implements FeedClient {
 <!------------ ANOTHERMONITOR SLIDES ----------------->
 
 ---
-# App #2: [AnotherMonitor](https://play.google.com/store/apps/details?id=org.anothermonitor)
+# App #2: [AnotherMonitor](https://sourcegraph.com/github.com/AntonioRedondo/AnotherMonitor)
 
 <table>
 <tr>
@@ -1196,14 +1217,14 @@ Android is just Linux.
 <!----------------- ANTENNAPOD SLIDES ------------------->
 
 ---
-# App #3: [AntennaPod](http://antennapod.org/)
+# App #3: [AntennaPod](https://sourcegraph.com/github.com/AntennaPod/AntennaPod/-/blob/README.md)
 
 <img src="images/pod/main.png" style="width: 32%; box-shadow: 0 0 7px 0 gray;">
 <img src="images/pod/menu.png" style="width: 32%; box-shadow: 0 0 7px 0 gray;">
 <img src="images/pod/playback.png" style="width: 32%; box-shadow: 0 0 7px 0 gray;">
 
 ---
-# App #3: [AntennaPod](http://antennapod.org/)
+# App #3: [AntennaPod](https://sourcegraph.com/github.com/AntennaPod/AntennaPod/-/blob/README.md)
 
 A medium-sized [open-source](https://sourcegraph.com/github.com/AntennaPod/AntennaPod/-/blob/README.md) podcast app.
 
@@ -1358,6 +1379,34 @@ Start with the download button:
 <img src="images/pod/episodes.png">
 
 
+---
+## Exercise: How are audio files fetched and stored?
+
+<a href="https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/app/src/main/java/de/danoeh/antennapod/fragment/AllEpisodesFragment.java#L72-74:37">
+```java
+public class AllEpisodesFragment extends Fragment {
+    ...
+    protected RecyclerView recyclerView;
+    protected AllEpisodesRecycleAdapter listAdapter;
+    private ProgressBar progLoading;
+```
+</a>
+
+<a href="https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/app/src/main/java/de/danoeh/antennapod/adapter/AllEpisodesRecycleAdapter.java#L231-237:7">
+```java
+public class AllEpisodesRecycleAdapter extends RecyclerView.Adapter<AllEpisodesRecycleAdapter.Holder> {
+    ...
+    private View.OnClickListener secondaryActionListener = new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                FeedItem item = (FeedItem) v.getTag();
+                actionButtonCallback.onActionButtonPressed(item, itemAccess.getQueueIds());
+            }
+        };
+```
+</a>
+
+
 
 ---
 ## Open source is a treasure trove
@@ -1506,7 +1555,7 @@ class: center, middle
 ---
 ### Understanding Gradle is hard
 
-Gradle can look declarative:
+Gradle looks declarative:
 <a href="https://sourcegraph.com/github.com/Goddchen/Android-Gradle-Examples/-/blob/Gradle%20Hello%20World/build.gradle">
 ```gradle
 buildscript {
@@ -1550,9 +1599,9 @@ But there's a problem.
 ---
 ### Understanding Gradle is hard
 
-...but it's not.
+...but it's often not.
 
-Dependencies depend on values of arbitrary variables:
+Dependencies refer to values of arbitrary variables:
 <a href="https://sourcegraph.com/github.com/mockito/mockito@1a1f598b0227a03dab6c5bc595db7072cfd5602c/-/blob/build.gradle#L60-65">
 ```gradle
 dependencies {
@@ -1598,7 +1647,7 @@ subprojects {
 
 
 ---
-## Asks
+## Asks for the community
 
 > ### Strong conventions
 
@@ -1635,13 +1684,11 @@ class: center
 
 --
 
-Beyang Liu
-
-[Sourcegraph](http://sourcegraph.com/)
+<a href="https://beyang.github.io/gradle-summit-2017">beyang.github.io/gradle-summit-2017</a>
 
 [@beyang](https://twitter.com/beyang)
 
-beyang@sourcegraph.com
+[Sourcegraph](http://sourcegraph.com/)
 
 
 
