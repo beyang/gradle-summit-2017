@@ -116,6 +116,7 @@ class: center, middle
 * Gradle and code understanding tools: 5 min
 
 
+
 ---
 # About me
 
@@ -132,6 +133,18 @@ Sourcegraph
 * code search and browsing
 
 * indexes all of open source, makes it easy to dive in
+
+
+
+---
+class: middle,center
+### When was the last time you went and understood a large chunk of code that you didn't write?
+
+???
+
+We don't take full advantage of the amazing corpus of open-source code that's available.
+
+
 
 
 ---
@@ -262,121 +275,283 @@ packaging it.
 It's a way to browse Wikipedia.
 
 ---
-### Wikipedia backbone structure
+## Wikipedia backbone
 
-<table class="fragment-views">
-
-<tr>
-    <th>
-        Activity hierarchy
-    </th>
-    <th>
-        Views
-    </th>
-</tr>
-
-<tr>
-    <td>
-        <code>MainActivity</code>
-    </td>
-    <td>
-        <code>FrameLayout</code>
-    </td>
-</tr>
-<tr>
-    <td>
-        <code>&emsp;MainFragment</code>
-    </td>
-    <td>
-        <code>CoordinatorLayout</code><br>
-        <code>&emsp;NoSwipeViewPager (ViewPager)</code><br>
-        <code>NavTabLayout</code>
-    </td>
-</tr>
-<tr>
-    <td>
-        <code>&emsp;&emsp;FeedFragment</code>
-    </td>
-    <td>
-        <code>FeedView (RecyclerView)</code>
-    </td>
-</tr>
-<tr>
-    <td>
-        <code>&emsp;&emsp;ReadingListsFragment</code>
-    </td>
-    <td>
-        <code>RecyclerView</code>
-    </td>
-</tr>
-<tr>
-    <td>
-        <code>&emsp;&emsp;HistoryFragment</code>
-    </td>
-    <td>
-        <code>RecyclerView</code>
-    </td>
-</tr>
-<tr>
-    <td>
-        <code>&emsp;&emsp;NearbyFragment</code>
-    </td>
-    <td>
-        <code>MapView</code>
-    </td>
-</tr>
-
-</table>
-
-<br>
-<table class="fragment-views">
-<tr>
-    <th colspan="2">
-        Other classes
-    </th>
-</tr>
-<tr>
-    <td colspan="2">
-        <code>NavTab</code>
-    </td>
-</tr>
-</table>
+<img src="images/wiki_arch.svg">
 
 
+---
+class: center
+
+<br><br><br><br>
+## How do we discover the backbone?
+
+--
+
+<br><br>
+## Ask: What does this app do on initialization?
+
+---
+### Wikipedia: how does it arrive at its initial state?
+
+<center>
+<img src="images/feed.png" alt="Wikipedia app" style="width: 40%">
+</center>
 
 
+---
+### Wikipedia: where's the "main" function?
 
+Looking for something like:
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+```java
+public class MainActivity {
+  public void onCreate(Bundle savedInstanceState) {
+    ...
+  }
+}
+```
 
 ???
 
-TODO:
-- General-purpose algo for reading code
+* Android apps revolve around "activities."
+
+* Main activity is called `MainActivity`.
+
+* `onCreate` and `onCreateView` are initializers.
+
+--
+
+Search for the main activity class:
+
+[![symbol search for "activity"](images/search_activity.png)](https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/main/MainActivity.java#L13:14-13:26)
+
+
+
+---
+### Where is MainActivity.onCreate()?
+
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/main/MainActivity.java#L13-14">
+```java
+public class MainActivity extends SingleFragmentToolbarActivity<MainFragment>
+```
+</a>
+<center><em>jump to superclass</em></center>
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/activity/SingleFragmentToolbarActivity.java#L15:23">
+```java
+public abstract class SingleFragmentToolbarActivity<T extends Fragment> extends SingleFragmentActivity<T> {
+```
+</a>
+<center><em>jump to superclass</em></center>
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/activity/SingleFragmentActivity.java#L14:23">
+```java
+public abstract class SingleFragmentActivity<T extends Fragment> extends ThemedActionBarActivity {
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(getLayout());
+
+        if (!isFragmentCreated()) {
+            addFragment(createFragment());
+        }
+    }
+```
+???
+
+Walk up inheritance tree:
+
+* No `MainActivity.onCreate`
+
+* Inheritance tree
+
+* `FragmentManager`
+
+* `createFragment()`
+
+
+---
+### What does onCreate() do?
+
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/main/MainActivity.java#L20-23">
+```java
+public class MainActivity extends SingleFragmentToolbarActivity<MainFragment>
+    implements MainFragment.Callback {
+    ...
+    @Override protected MainFragment createFragment() {
+        return MainFragment.newInstance();
+    }
+```
+</a>
+*creates new instance of `MainFragment`*
+
+???
+
+MainFragment
+
+---
+### What does MainFragment.onCreateView do?
+
+`MainFragment.onCreateView` wires up the tab bar to the view pager:
+
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/main/MainFragment.java#L101-123:6">
+```java
+public class MainFragment extends Fragment implements BackPressedHandler, FeedFragment.Callback, NearbyFragment.Callback, HistoryFragment.Callback, SearchFragment.Callback, LinkPreviewDialog.Callback {
+
+    @BindView(R.id.fragment_main_view_pager) ViewPager viewPager;
+    @BindView(R.id.fragment_main_nav_tab_layout) NavTabLayout tabLayout;
+    ...
+
+    @Nullable @Override public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        super.onCreateView(inflater, container, savedInstanceState);
+        View view = inflater.inflate(R.layout.fragment_main, container, false);
+        unbinder = ButterKnife.bind(this, view);
+
+        viewPager.setAdapter(new NavTabFragmentPagerAdapter(getChildFragmentManager()));
+        tabLayout.setOnNavigationItemSelectedListener(new BottomNavigationView.OnNavigationItemSelectedListener() {
+            @Override
+            public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+                viewPager.setCurrentItem(item.getOrder());
+                return true;
+            }
+        });
+```
+</a>
+
+???
+
+MainFragment wire-up:
+
+* `createFragment() -> MainFragment`
+
+* `MainFragment.onCreateView`
+
+    * "inflates" view from XML
+
+    * Butterknife
+      * `@BindView`
+      * `Butterknife.bind`
+
+    * wires up both a `ViewPager` view and a `NavTabLayout (BottomNavigationView)` view
+
+* The `ViewPager` instance gets its view from the `NavTabLayout` instance, so let's 
+
+
+---
+### What does MainFragment.onCreateView do?
+
+`MainFragment.onCreateView` wires up the tab bar to the view pager:
+
+<img src="images/tab_bar_to_pager.png" style="width: 50%;">
+
+
+
+
+---
+### But where do the tabs come from?
+
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/main/MainFragment.java#L101:37-101:49">
+```java
+public class MainFragment extends Fragment implements BackPressedHandler, FeedFragment.Callback, NearbyFragment.Callback, HistoryFragment.Callback, SearchFragment.Callback, LinkPreviewDialog.Callback {
+    ...
+    @Nullable @Override public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        ...
+        View view = inflater.inflate(R.layout.fragment_main, container, false);
+```
+</a>
+
+`resources/fragment_main.xml`:
+
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/res/layout/fragment_main.xml#L28-37">
+```xml
+        <org.wikipedia.navtab.NavTabLayout
+```
+</a>
+
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/navtab/NavTabLayout.java#L25-30:6">
+```java
+public class NavTabLayout extends BottomNavigationView {
+    ...
+    private void setTabViews() {
+        for (int i = 0; i < NavTab.size(); i++) {
+            NavTab navTab = NavTab.of(i);
+            getMenu().add(Menu.NONE, i, i, navTab.text()).setIcon(navTab.icon());
+        }
+    }
+```
+</a>
+
+
+
+
+---
+### Wikipedia: how does it arrive at its initial state? (continued)
+
+*references* `enum NavTab`
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/navtab/NavTab.java#L16-21:7">
+```java
+public enum NavTab implements EnumCode {
+    EXPLORE(R.string.nav_item_feed, R.drawable.ic_globe) {
+        @NonNull @Override public Fragment newInstance() {
+            return FeedFragment.newInstance();
+        }
+    },
+    READING_LISTS(R.string.nav_item_reading_lists, R.drawable.ic_bookmark_white_24dp) {
+        @NonNull @Override public Fragment newInstance() {
+            return ReadingListsFragment.newInstance();
+        }
+    },
+    HISTORY(R.string.nav_item_history, R.drawable.ic_restore_black_24dp) {
+        @NonNull @Override public Fragment newInstance() {
+            return HistoryFragment.newInstance();
+        }
+    },
+    NEARBY(R.string.nav_item_nearby, R.drawable.ic_explore_black_24dp) {
+        @NonNull @Override public Fragment newInstance() {
+            return NearbyFragment.newInstance();
+        }
+    };
+```
+</a>
+
+???
+
+NavTabLayout -> 4 tab options -> FeedFragment.newInstance
+
+
+
+
+---
+## Wikipedia backbone
+<img src="images/wiki_arch.svg">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--------------------------- 30 ----------------------------->
+
+
+
+---
+## Topics of interest
+
+* News feed
+
+
+
+
+
+
+
 
 
 
