@@ -382,7 +382,7 @@ public abstract class SingleFragmentActivity<T extends Fragment> extends ThemedA
         setContentView(getLayout());
 
         if (!isFragmentCreated()) {
-            addFragment(createFragment());
+            addFragment(createFragment());  
         }
     }
 ```
@@ -1726,7 +1726,7 @@ Takeaways
 
 
     </textarea>
-    <script src="https://remarkjs.com/downloads/remark-latest.min.js">
+    <script src="vendor/remark-latest.min.js">
     </script>
     <script>
       var slideshow = remark.create({
