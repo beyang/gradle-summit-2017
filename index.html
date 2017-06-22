@@ -118,7 +118,7 @@ class: center, middle
 
 * Gradle and code understanding tools: 5 min
 
-
+[example pull request](https://github.com/wikimedia/apps-android-wikipedia/pull/10/files)
 
 ---
 # About me
@@ -356,7 +356,7 @@ Search for the main activity class:
 
 ---
 ### Where is MainActivity.onCreate?
-
+    
 <a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/main/MainActivity.java#L13-14">
 ```java
 public class MainActivity extends SingleFragmentToolbarActivity<MainFragment> {
@@ -408,7 +408,7 @@ public class MainActivity extends SingleFragmentToolbarActivity<MainFragment>
     implements MainFragment.Callback {
     ...
     @Override protected MainFragment createFragment() {
-        return MainFragment.newInstance();
+        return MainFragment.newInstance();  
     }
 ```
 </a>
@@ -425,14 +425,14 @@ public class MainActivity extends SingleFragmentToolbarActivity<MainFragment>
 ```java
 public class MainFragment extends Fragment implements BackPressedHandler, FeedFragment.Callback, NearbyFragment.Callback, HistoryFragment.Callback, SearchFragment.Callback, LinkPreviewDialog.Callback {
 
-    @BindView(R.id.fragment_main_view_pager) ViewPager viewPager;
-    @BindView(R.id.fragment_main_nav_tab_layout) NavTabLayout tabLayout;
+    @BindView(R.id.fragment_main_view_pager) ViewPager viewPager;  
+    @BindView(R.id.fragment_main_nav_tab_layout) NavTabLayout tabLayout;  
     ...
 
     @Nullable @Override public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         ...
         View view = inflater.inflate(R.layout.fragment_main, container, false);
-        unbinder = ButterKnife.bind(this, view);
+        unbinder = ButterKnife.bind(this, view);  
 
         viewPager.setAdapter(new NavTabFragmentPagerAdapter(getChildFragmentManager()));
         tabLayout.setOnNavigationItemSelectedListener(
@@ -465,6 +465,41 @@ MainFragment wire-up:
 
 * The `ViewPager` instance gets its view from the `NavTabLayout` instance, so let's 
 
+---
+### What does MainFragment.onCreateView do?
+
+`MainFragment.onCreateView` wires up the tab bar to the view pager:
+
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/main/MainFragment.java#L101-123:6">
+```java
+public class MainFragment extends Fragment implements BackPressedHandler, FeedFragment.Callback, NearbyFragment.Callback, HistoryFragment.Callback, SearchFragment.Callback, LinkPreviewDialog.Callback {
+
+    @BindView(R.id.fragment_main_view_pager) ViewPager viewPager;
+    @BindView(R.id.fragment_main_nav_tab_layout) NavTabLayout tabLayout;
+    ...
+
+    @Nullable @Override public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        ...
+        View view = inflater.inflate(R.layout.fragment_main, container, false);
+        unbinder = ButterKnife.bind(this, view);
+
+        viewPager.setAdapter(new NavTabFragmentPagerAdapter(getChildFragmentManager()));  
+        tabLayout.setOnNavigationItemSelectedListener(  
+            new BottomNavigationView.OnNavigationItemSelectedListener() {  
+                @Override  
+                public boolean onNavigationItemSelected(@NonNull MenuItem item) {  
+                    viewPager.setCurrentItem(item.getOrder());  
+                    return true;  
+                }  
+            }  
+        );  
+```
+</a>
+
+
+
+
+
 
 ---
 ### What does MainFragment.onCreateView do?
@@ -485,7 +520,8 @@ public class MainFragment extends Fragment implements BackPressedHandler, FeedFr
     ...
     @Nullable @Override public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         ...
-        View view = inflater.inflate(R.layout.fragment_main, container, false);
+        View view = inflater.inflate(R.layout.fragment_main, container, false);  
+        ...
 ```
 </a>
 
@@ -503,8 +539,8 @@ public class NavTabLayout extends BottomNavigationView {
     ...
     private void setTabViews() {
         for (int i = 0; i < NavTab.size(); i++) {
-            NavTab navTab = NavTab.of(i);
-            getMenu().add(Menu.NONE, i, i, navTab.text()).setIcon(navTab.icon());
+            NavTab navTab = NavTab.of(i);  
+            getMenu().add(Menu.NONE, i, i, navTab.text()).setIcon(navTab.icon());  
         }
     }
 ```
@@ -645,7 +681,7 @@ public class FeedFragment extends Fragment implements BackPressedHandler {
 
 <a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@8857c36d6a4ed4c106086d3436c2e3a4afd08f8c/-/blob/app/src/main/java/org/wikipedia/feed/view/FeedView.java#L19:14">
 ```java
-public class FeedView extends AutoFitRecyclerView {
+public class FeedView extends AutoFitRecyclerView {  
     private StaggeredGridLayoutManager recyclerLayoutManager;
     @Nullable private ItemTouchHelper itemTouchHelper;
 ```
@@ -672,7 +708,7 @@ public class FeedAdapter<T extends View & FeedCardView<?>> extends DefaultRecycl
     ...
     @Override
     public DefaultViewHolder<T> onCreateViewHolder(ViewGroup parent, int viewType) {
-        return new DefaultViewHolder<>(newView(parent.getContext(), viewType));
+        return new DefaultViewHolder<>(newView(parent.getContext(), viewType));  
     }
 
     @Override public void onBindViewHolder(DefaultViewHolder<T> holder, int position) {
@@ -681,15 +717,16 @@ public class FeedAdapter<T extends View & FeedCardView<?>> extends DefaultRecycl
 
         ...
 
-        ((FeedCardView<Card>) view).setCard(item);
+        ((FeedCardView<Card>) view).setCard(item);  
         ...
     }
 
     ...
 
-    @NonNull private T newView(@NonNull Context context, int viewType) {
-        return (T) CardType.of(viewType).newView(context);
-    }
+    @NonNull private T newView(@NonNull Context context, int viewType) {  
+        return (T) CardType.of(viewType).newView(context);  
+    }  
+    ...
 ```
 </a>
 
@@ -707,6 +744,17 @@ Standard `RecyclerView` pattern:
 ---
 ### How do we get different card view types?
 
+The type of card is determined at runtime:
+<a href="">
+```java
+public class FeedAdapter<T extends View & FeedCardView<?>> extends DefaultRecyclerAdapter<Card, T> {
+    ...
+    @NonNull private T newView(@NonNull Context context, int viewType) {
+        return (T) CardType.of(viewType).newView(context);  
+    }
+```
+</a>
+
 Child view (card) classes satisfy common interface:
 
 <a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/feed/view/FeedCardView.java#L8-12:2">
@@ -719,55 +767,123 @@ public interface FeedCardView<T extends Card> {
 ```
 </a>
 
-The type of card is determined at runtime:
-<a href="">
+
+---
+### How do we get different card view types?
+
+Dynamic polymorphic construction via enum type:
+
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/feed/model/CardType.java#L22:13-22:21">
+```java
+public enum CardType implements EnumCode {  
+    SEARCH_BAR(0) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new SearchCardView(ctx);  
+        }
+    },
+    CONTINUE_READING(1) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new ContinueReadingCardView(ctx);  
+        }
+    },
+    BECAUSE_YOU_READ_LIST(2) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new BecauseYouReadCardView(ctx);  
+        }
+    },
+    MOST_READ_LIST(3) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new MostReadCardView(ctx);  
+        }
+    },
+    FEATURED_ARTICLE(4) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new FeaturedArticleCardView(ctx);  
+        }
+```
+</a>
+
+
+
+
+
+
+
+
+---
+### Where does the data for a card come from? <!-- 1 -->
+
+`FeedAdapter` gives a `Card` instance to the view. `Card`s are provided by `FeedCoordinatorBase`.
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/feed/view/FeedAdapter.java#L46:27-46:43">
 ```java
 public class FeedAdapter<T extends View & FeedCardView<?>> extends DefaultRecyclerAdapter<Card, T> {
     ...
-    @NonNull private T newView(@NonNull Context context, int viewType) {
-        return (T) CardType.of(viewType).newView(context);
+    @NonNull private FeedCoordinatorBase coordinator;
+    ...
+    public FeedAdapter(@NonNull FeedCoordinatorBase coordinator, @Nullable Callback callback) {
+        super(coordinator.getCards());
+        ...
+    }
+    ...
+    @Override public void onBindViewHolder(DefaultViewHolder<T> holder, int position) {
+        Card item = item(position);
+        ...
+        ((FeedCardView<Card>) view).setCard(item);  
+        ...
+```
+</a>
+
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/views/DefaultRecyclerAdapter.java#L9:23">
+```java
+public abstract class DefaultRecyclerAdapter<T, V extends View> extends RecyclerView.Adapter<DefaultViewHolder<V>> {
+    public DefaultRecyclerAdapter(@NonNull List<T> items) {
+        this.items = items;
+    }
+    ...
+    protected T item(int position) {
+        return items.get(position);
     }
 ```
 </a>
 
 ---
-### How do we get different card view types?
+### Where does the data for a card come from? <!-- 2 -->
 
-Different card view classes, identified by enum backed by `EnumCode`:
-
-<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/feed/model/CardType.java#L22:13-22:21">
+`FeedAdapter` gives a `Card` instance to the view. `Card`s are provided by `FeedCoordinatorBase`.
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/feed/view/FeedAdapter.java#L46:27-46:43">
 ```java
-public enum CardType implements EnumCode {
-    SEARCH_BAR(0) {
-        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
-            return new SearchCardView(ctx);
-        }
-    },
-    CONTINUE_READING(1) {
-        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
-            return new ContinueReadingCardView(ctx);
-        }
-    },
-    BECAUSE_YOU_READ_LIST(2) {
-        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
-            return new BecauseYouReadCardView(ctx);
-        }
-    },
-    MOST_READ_LIST(3) {
-        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
-            return new MostReadCardView(ctx);
-        }
-    },
-    FEATURED_ARTICLE(4) {
-        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
-            return new FeaturedArticleCardView(ctx);
-        }
+public class FeedAdapter<T extends View & FeedCardView<?>> extends DefaultRecyclerAdapter<Card, T> {
+    ...
+    @NonNull private FeedCoordinatorBase coordinator;
+    ...
+    public FeedAdapter(@NonNull FeedCoordinatorBase coordinator, @Nullable Callback callback) {
+        super(coordinator.getCards());
+        ...
+    }
+    ...
+    @Override public void onBindViewHolder(DefaultViewHolder<T> holder, int position) {
+        Card item = item(position);  
+        ...
+        ((FeedCardView<Card>) view).setCard(item);
+        ...
 ```
 </a>
 
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/views/DefaultRecyclerAdapter.java#L9:23">
+```java
+public abstract class DefaultRecyclerAdapter<T, V extends View> extends RecyclerView.Adapter<DefaultViewHolder<V>> {
+    public DefaultRecyclerAdapter(@NonNull List<T> items) {
+        this.items = items;
+    }
+    ...
+    protected T item(int position) {
+        return items.get(position);
+    }
+```
+</a>
 
 ---
-### Where does the data for a card come from?
+### Where does the data for a card come from? <!-- 3 -->
 
 `FeedAdapter` gives a `Card` instance to the view. `Card`s are provided by `FeedCoordinatorBase`.
 <a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/feed/view/FeedAdapter.java#L46:27-46:43">
@@ -785,6 +901,79 @@ public class FeedAdapter<T extends View & FeedCardView<?>> extends DefaultRecycl
         Card item = item(position);
         ...
         ((FeedCardView<Card>) view).setCard(item);
+        ...
+```
+</a>
+
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/views/DefaultRecyclerAdapter.java#L9:23">
+```java
+public abstract class DefaultRecyclerAdapter<T, V extends View> extends RecyclerView.Adapter<DefaultViewHolder<V>> {
+    public DefaultRecyclerAdapter(@NonNull List<T> items) {
+        this.items = items;
+    }
+    ...
+    protected T item(int position) {  
+        return items.get(position);  
+    }  
+```
+</a>
+
+---
+### Where does the data for a card come from? <!-- 4 -->
+
+`FeedAdapter` gives a `Card` instance to the view. `Card`s are provided by `FeedCoordinatorBase`.
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/feed/view/FeedAdapter.java#L46:27-46:43">
+```java
+public class FeedAdapter<T extends View & FeedCardView<?>> extends DefaultRecyclerAdapter<Card, T> {
+    ...
+    @NonNull private FeedCoordinatorBase coordinator;
+    ...
+    public FeedAdapter(@NonNull FeedCoordinatorBase coordinator, @Nullable Callback callback) {
+        super(coordinator.getCards());
+        ...
+    }
+    ...
+    @Override public void onBindViewHolder(DefaultViewHolder<T> holder, int position) {
+        Card item = item(position);
+        ...
+        ((FeedCardView<Card>) view).setCard(item);
+        ...
+```
+</a>
+
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/views/DefaultRecyclerAdapter.java#L9:23">
+```java
+public abstract class DefaultRecyclerAdapter<T, V extends View> extends RecyclerView.Adapter<DefaultViewHolder<V>> {
+    public DefaultRecyclerAdapter(@NonNull List<T> items) {
+        this.items = items;  
+    }
+    ...
+    protected T item(int position) {
+        return items.get(position);
+    }
+```
+</a>
+
+---
+### Where does the data for a card come from? <!-- 5 -->
+
+`FeedAdapter` gives a `Card` instance to the view. `Card`s are provided by `FeedCoordinatorBase`.
+<a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/feed/view/FeedAdapter.java#L46:27-46:43">
+```java
+public class FeedAdapter<T extends View & FeedCardView<?>> extends DefaultRecyclerAdapter<Card, T> {
+    ...
+    @NonNull private FeedCoordinatorBase coordinator;  
+    ...
+    public FeedAdapter(@NonNull FeedCoordinatorBase coordinator, @Nullable Callback callback) {
+        super(coordinator.getCards());  
+        ...
+    }
+    ...
+    @Override public void onBindViewHolder(DefaultViewHolder<T> holder, int position) {
+        Card item = item(position);
+        ...
+        ((FeedCardView<Card>) view).setCard(item);
+        ...
 ```
 </a>
 
@@ -801,16 +990,9 @@ public abstract class DefaultRecyclerAdapter<T, V extends View> extends Recycler
 ```
 </a>
 
-???
 
-* Now know how views are managed.
 
-* Now ask where does data come from?
 
-    * `onBindViewHolder` ->
-    * `DefaultRecyclerAdapter.item()` ->
-    * `FeedAdapter` constructor
-    * `FeedCoordinatorBase` field
 
 
 ---
@@ -818,9 +1000,9 @@ public abstract class DefaultRecyclerAdapter<T, V extends View> extends Recycler
 
 <a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/feed/view/FeedAdapter.java#L33:54">
 ```java
-public abstract class FeedCoordinatorBase {
+public abstract class FeedCoordinatorBase {  
     ...
-    private FeedClient.Callback callback = new ClientRequestCallback();
+    private FeedClient.Callback callback = new ClientRequestCallback();  
     ...
     private void requestCard(@NonNull WikiSite wiki) {
         if (pendingClients.isEmpty()) {
@@ -840,10 +1022,10 @@ public abstract class FeedCoordinatorBase {
 <a href="https://sourcegraph.com/github.com/wikimedia/apps-android-wikipedia@edb0a841475606613ea4f6c3a4cda2d34c62b4e0/-/blob/app/src/main/java/org/wikipedia/feed/FeedCoordinatorBase.java#L149:19-149:40">
 ```java
     private class ClientRequestCallback implements FeedClient.Callback {
-        @Override public void success(@NonNull List<? extends Card> cardList) {
+        @Override public void success(@NonNull List<? extends Card> cardList) {  
             for (Card card : cardList) {
                 if (!isCardHidden(card)) {
-                    appendCard(card);
+                    appendCard(card);  
                 }
             }
             requestNextCard(wiki);
@@ -870,8 +1052,8 @@ class FeedCoordinator extends FeedCoordinatorBase {
             addPendingClient(new SearchClient());
             addPendingClient(new AnnouncementClient());
         }
-        addPendingClient(new AggregatedFeedContentClient());
-        addPendingClient(new ContinueReadingClient());
+        addPendingClient(new AggregatedFeedContentClient());  
+        addPendingClient(new ContinueReadingClient());  
         ...
     }
 }
@@ -891,10 +1073,10 @@ public class AggregatedFeedContentClient implements FeedClient {
         UtcDate date = DateUtil.getUtcRequestDateFor(age);
         String endpoint = String.format(Locale.ROOT, Prefs.getRestbaseUriFormat(), wiki.scheme(),
                 wiki.authority());
-        Retrofit retrofit = RetrofitFactory.newInstance(endpoint, wiki);
-        AggregatedFeedContentClient.Service service = retrofit.create(Service.class);
-        call = service.get(date.year(), date.month(), date.date());
-        call.enqueue(new CallbackAdapter(cb, wiki, age));
+        Retrofit retrofit = RetrofitFactory.newInstance(endpoint, wiki);  
+        AggregatedFeedContentClient.Service service = retrofit.create(Service.class);  
+        call = service.get(date.year(), date.month(), date.date());  
+        call.enqueue(new CallbackAdapter(cb, wiki, age));  
     }
 ```
 </a>
@@ -915,7 +1097,7 @@ public class AggregatedFeedContentClient implements FeedClient {
 
 * Retrofit
 
-* `enum CardType` and `CardType.of`
+* `enum CardType` and `CardType.of`: dynamic polymorphic construction in enum class
 
 
 ---
@@ -967,7 +1149,7 @@ public class AggregatedFeedContentClient implements FeedClient {
 
 
 ---
-### What does it do on init?
+### What does it do on init? <!-- 1 -->
 <a href="https://sourcegraph.com/github.com/AntonioRedondo/AnotherMonitor@8b7fc67af9216ccdd3209cc014901b12efb5da3e/-/blob/AnotherMonitor/src/main/java/org/anothermonitor/ActivityMain.java#L246:14-246:22">
 ```java
 public class ActivityMain extends Activity {
@@ -979,20 +1161,14 @@ public class ActivityMain extends Activity {
     ...
 	private ViewGraphic mVG;
     ...
-    private ServiceReader mSR;
+    private ServiceReader mSR;  
     ...
     public void onCreate(Bundle savedInstanceState) {
         ...
-		startService(new Intent(this, ServiceReader.class));
+		startService(new Intent(this, ServiceReader.class));  
 		setContentView(R.layout.activity_main);
         ...
 		mVG = (ViewGraphic) findViewById(R.id.ANGraphic);
-
-		graphicMode = mPrefs.getInt(C.graphicMode, C.graphicModeShowMemory);
-		mVG.setGraphicMode(graphicMode);
-		...
-		mBMemory = (Button) findViewById(R.id.BMemory);
-		mBMemory.setOnClickListener(new View.OnClickListener() { ... });
 		...
     }
 ```
@@ -1009,20 +1185,50 @@ public class ActivityMain extends Activity {
 
 * `ViewGraphic` class
 
+---
+### What does it do on init? <!-- 2 -->
+<a href="https://sourcegraph.com/github.com/AntonioRedondo/AnotherMonitor@8b7fc67af9216ccdd3209cc014901b12efb5da3e/-/blob/AnotherMonitor/src/main/java/org/anothermonitor/ActivityMain.java#L246:14-246:22">
+```java
+public class ActivityMain extends Activity {
+    ...
+    private FrameLayout mLSettings, mLGraphicSurface, mCloseSettings;
+    private LinearLayout mLParent, mLTopBar, mLMenu, mLProcessContainer, mLFeedback, mLWelcome, mLCPUTotal, mLCPUAM, mLMemUsed, mLMemAvailable, mLMemFree, mLCached, mLThreshold;
+    private TextView mTVCPUTotalP, mTVCPUAMP, mTVMemoryAM, mTVMemTotal, mTVMemUsed, mTVMemAvailable, mTVMemFree, mTVCached, mTVThreshold, mTVMemUsedP, mTVMemAvailableP, mTVMemFreeP, mTVCachedP, mTVThresholdP;
+    private ImageView mLButtonMenu, mLButtonRecord/*, mIVSettingsBG*/;
+    ...
+	private ViewGraphic mVG;  
+    ...
+    private ServiceReader mSR;
+    ...
+    public void onCreate(Bundle savedInstanceState) {
+        ...
+		startService(new Intent(this, ServiceReader.class));
+		setContentView(R.layout.activity_main);
+        ...
+		mVG = (ViewGraphic) findViewById(R.id.ANGraphic);  
+		...
+    }
+```
+</a>
+
+
+
+
+
 
 ---
 ### How does ViewGraphic render the chart?
 
 <a href="https://sourcegraph.com/github.com/AntonioRedondo/AnotherMonitor@8b7fc67af9216ccdd3209cc014901b12efb5da3e/-/blob/AnotherMonitor/src/main/java/org/anothermonitor/ViewGraphic.java#L29:14-29:25">
 ```java
-public class ViewGraphic extends TextureView {
+public class ViewGraphic extends TextureView {  
     ...
 	private int processesMode, graphicMode, yTop, yBottom, xLeft, xRight, yBottomTextSpace=25, xLeftTextSpace=10, yLegendSpace = 8, graphicHeight, graphicWidth, minutes, seconds, intervalTotalNumber, memTotal,
 				 thickParam, thickGrid, thickEdges, tempVar, textSize, textSizeLegend, yTopSeparation;
 	private String readIntervalText, updateIntervalText, graphicIntervaWidthlText, recordingText = "Recording";
 	private Rect bgRect;
     ...
-    private List<Float> cpuTotal, cpuAM;
+    private List<Float> cpuTotal, cpuAM;  
     private List<Integer> memoryAM;
     private List<String> memUsed, memAvailable, memFree, cached, threshold;
     ...
@@ -1054,7 +1260,7 @@ public class ViewGraphic extends TextureView {
     ...
     //	@Override
 	@SuppressWarnings("unchecked")
-	protected void onDrawCustomised(Canvas canvas, Thread thread) {
+	protected void onDrawCustomised(Canvas canvas, Thread thread) {  
 		if (mSR == null || canvas == null)
 			return;
 		else if (!graphicInitialised)
@@ -1067,7 +1273,7 @@ public class ViewGraphic extends TextureView {
 		canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
 		if (mThread.isInterrupted())
 			return;
-		canvas.drawRect(bgRect, bgPaint);
+		canvas.drawRect(bgRect, bgPaint);  
 		...
 	}
 }
@@ -1128,13 +1334,13 @@ View update logic spread across 2 classes (anti-pattern!)
 ```java
 public class ActivityMain extends Activity {
 	...
-	private ServiceReader mSR;
+	private ServiceReader mSR;  
 	...
 	private Runnable drawRunnable = new Runnable() {
 		@Override
 		public void run() {
 				...
-				setTextLabelCPU(null, mTVCPUTotalP, mSR.getCPUTotalP());
+				setTextLabelCPU(null, mTVCPUTotalP, mSR.getCPUTotalP());  
 				...
 				setTextLabelMemory(mTVMemUsed, mTVMemUsedP, mSR.getMemUsed());
 				setTextLabelMemory(mTVMemAvailable, mTVMemAvailableP, mSR.getMemAvailable());
@@ -1154,16 +1360,12 @@ public class ActivityMain extends Activity {
 ```java
 public class ServiceReader extends Service {
 	...
-	private ActivityManager.MemoryInfo mi;
-	...
 	private Runnable readRunnable = new Runnable() {
 		@Override
 		public void run() {
-			// The service makes use of an explicit Thread instead of a Handler because with the Threat the code is executed more synchronously.
-			// However the ViewGraphic is drawed with a Handler because the drawing code must be executed in the UI thread.
 			Thread thisThread = Thread.currentThread();
 			while (readThread == thisThread) {
-				read();
+				read();  
 				try {
 					Thread.sleep(intervalRead);
 				} catch (InterruptedException e) {
@@ -1195,13 +1397,13 @@ public class ServiceReader extends Service {
 	...
 	private void read() {
 		try {
-			reader = new BufferedReader(new FileReader("/proc/meminfo"));
+			reader = new BufferedReader(new FileReader("/proc/meminfo"));  
 			s = reader.readLine();
 			while (s != null) {
     	        ...
             }
             ...
-			reader = new BufferedReader(new FileReader("/proc/stat"));
+			reader = new BufferedReader(new FileReader("/proc/stat"));  
 			sa = reader.readLine().split("[ ]+", 9);
 			work = Long.parseLong(sa[1]) + Long.parseLong(sa[2]) + Long.parseLong(sa[3]);
 			total = work + Long.parseLong(sa[4]) + Long.parseLong(sa[5]) + Long.parseLong(sa[6]) + Long.parseLong(sa[7]);
@@ -1284,8 +1486,7 @@ public class MainActivity extends CastEnabledActivity implements NavDrawerActivi
         externalPlayerFragment = new ExternalPlayerFragment();
         transaction.replace(R.id.playerFragment, externalPlayerFragment, ExternalPlayerFragment.TAG);
         transaction.commit();
-
-        checkFirstLaunch();  
+        ...
 }
 ```
 </a>
@@ -1303,31 +1504,6 @@ public class MainActivity extends CastEnabledActivity implements NavDrawerActivi
 
 * `ExternalPlayerFragment` controls the persistent playback footer
 
----
-### What happens on init?
-
-<a href="https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/app/src/main/java/de/danoeh/antennapod/activity/MainActivity.java?q=navigation#L225-237:6">
-```java
-public class MainActivity extends CastEnabledActivity implements NavDrawerActivity {
-
-    private void checkFirstLaunch() {
-        SharedPreferences prefs = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
-        if (prefs.getBoolean(PREF_IS_FIRST_LAUNCH, true)) {
-            new Handler().postDelayed(() -> drawerLayout.openDrawer(navDrawer), 1500);
-
-            // for backward compatibility, we only change defaults for fresh installs
-            UserPreferences.setUpdateInterval(12);
-
-            SharedPreferences.Editor edit = prefs.edit();
-            edit.putBoolean(PREF_IS_FIRST_LAUNCH, false);
-            edit.commit();
-        }
-    }
-}
-```
-</a>
-User preferences via `getSharedPreferences` and `SharedPreferences`
-
 
 ---
 ### What happens on init?
@@ -1336,21 +1512,21 @@ User preferences via `getSharedPreferences` and `SharedPreferences`
 ```java
 public class MainActivity extends CastEnabledActivity implements NavDrawerActivity {
 	...
-    private DrawerLayout drawerLayout;
+    private DrawerLayout drawerLayout;  
 	...
     @Override
     public void onCreate(Bundle savedInstanceState) {
 		...
-        drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
-        navList = (ListView) findViewById(R.id.nav_list);
-        navDrawer = findViewById(R.id.nav_layout);
+        drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);  
+        navList = (ListView) findViewById(R.id.nav_list);  
+        navDrawer = findViewById(R.id.nav_layout);  
 
         drawerToggle = new ActionBarDrawerToggle(this, drawerLayout, R.string.drawer_open, R.string.drawer_close);
         if (savedInstanceState != null) {
             int backstackCount = savedInstanceState.getInt(SAVE_BACKSTACK_COUNT, 0);
             drawerToggle.setDrawerIndicatorEnabled(backstackCount == 0);
         }
-        drawerLayout.setDrawerListener(drawerToggle);
+        drawerLayout.setDrawerListener(drawerToggle);  
 		...
 	}
 ```
@@ -1367,13 +1543,13 @@ public class MainActivity extends CastEnabledActivity implements NavDrawerActivi
 ```java
 public class MainActivity extends CastEnabledActivity implements NavDrawerActivity {
 	...
-    private ExternalPlayerFragment externalPlayerFragment;
+    private ExternalPlayerFragment externalPlayerFragment;  
 	...
     @Override
     public void onCreate(Bundle savedInstanceState) {
 		...
-        externalPlayerFragment = new ExternalPlayerFragment();
-        transaction.replace(R.id.playerFragment, externalPlayerFragment, ExternalPlayerFragment.TAG);
+        externalPlayerFragment = new ExternalPlayerFragment();  
+        transaction.replace(R.id.playerFragment, externalPlayerFragment, ExternalPlayerFragment.TAG);  
 	}
 }
 ```
@@ -1386,9 +1562,13 @@ Persistent playback view
 ---
 ## Exercise: How are audio files fetched and stored?
 
-Start with the download button:
+### Start with the *initial* action, the download button:
 
 <img src="images/pod/episodes.png">
+
+???
+
+Question: What kind of view is this?
 
 
 ---
@@ -1396,21 +1576,22 @@ Start with the download button:
 
 <a href="https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/app/src/main/java/de/danoeh/antennapod/fragment/AllEpisodesFragment.java#L72-74:37">
 ```java
-public class AllEpisodesFragment extends Fragment {
+public class AllEpisodesFragment extends Fragment {  
     ...
     protected RecyclerView recyclerView;
-    protected AllEpisodesRecycleAdapter listAdapter;
+    protected AllEpisodesRecycleAdapter listAdapter;  
     private ProgressBar progLoading;
 ```
 </a>
 
+`AllEpisodesRecycleAdapter.java`:
 <a href="https://sourcegraph.com/github.com/AntennaPod/AntennaPod@b3a879dd8f938fc3086dfd73c8cb915b1da7cecd/-/blob/app/src/main/java/de/danoeh/antennapod/adapter/AllEpisodesRecycleAdapter.java#L231-237:7">
 ```java
 public class AllEpisodesRecycleAdapter extends RecyclerView.Adapter<AllEpisodesRecycleAdapter.Holder> {
     ...
-    private View.OnClickListener secondaryActionListener = new View.OnClickListener() {
+    private View.OnClickListener secondaryActionListener = new View.OnClickListener() {  
             @Override
-            public void onClick(View v) {
+            public void onClick(View v) {  
                 FeedItem item = (FeedItem) v.getTag();
                 actionButtonCallback.onActionButtonPressed(item, itemAccess.getQueueIds());
             }
@@ -1534,38 +1715,44 @@ class: center, middle
 # What's wrong with IDEs?
 
 
+???
+
+There's nothing wrong with IDEs. I just wish I had the brains of an
+IDE everywhere I view code.
+
 ---
 # Places you interact with code in 2017
 
-* editor
+* Editor
 
-* cloud editors
+* Cloud editors
 
-* code browser
-
-* blog posts
+* Code browser
 
 * StackOverflow
 
-* chat
+* Blog posts
 
-* code review
+* Chat
+
+* Code review
 
 
+
+
+<!-- --- -->
+<!-- # Language Server Protocol (LSP) -->
+
+<!-- <center> -->
+<!-- <a href="https://github.com/Microsoft/language-server-protocol"><img src="images/lsp.png"></a> -->
+<!-- </center> -->
 
 
 ---
-# Language Server Protocol (LSP)
-
-<center>
-<a href="https://github.com/Microsoft/language-server-protocol"><img src="images/lsp.png"></a>
-</center>
-
-
----
-# Code intelligence everywhere
+# Jump-to-def everywhere
 
 <img src="images/langserver_arch.svg">
+
 
 
 ---
@@ -1696,7 +1883,7 @@ class: center
 <br><br><br><br><br><br>
 ## Mine the treasure trove of open source.
 
-## Let's build tools that make understanding code easier.
+## Let's use Gradle to build tools that make code understanding easier.
 
 --
 
