@@ -1887,12 +1887,11 @@ class: center
 
 --
 
-<a href="https://beyang.github.io/gradle-summit-2017">beyang.github.io/gradle-summit-2017</a>
-
 [@beyang](https://twitter.com/beyang)
 
 [Sourcegraph](http://sourcegraph.com/)
 
+[Chrome extension](https://chrome.google.com/webstore/detail/sourcegraph-for-github/dgjhfomjieaadpoljlnidmbgkdffpack)
 
 
 ???
@@ -1937,6 +1936,18 @@ Takeaways
             if (e.innerText.endsWith("  ")) {
                 e.style.background = "#405060";
             }
+        });
+
+        // Header
+        document.querySelectorAll("div.remark-slide-content").forEach(e => {
+            const h = document.createElement("div");
+            h.class = "header";
+            h.style.position = "absolute";
+            h.style.top = "1em";
+            h.style.right = "1em";
+            h.style.fontFamily = 'Arial, "Helvetica Neue", Helvetica, sans-serif';
+            h.innerHTML = '<a href="https://beyang.github.io/gradle-summit-2017" style="text-decoration: none">beyang.github.io/gradle-summit-2017</a>';
+            e.appendChild(h);
         });
     </script>
 
