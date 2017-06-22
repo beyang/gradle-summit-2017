@@ -301,6 +301,11 @@ It's a way to browse Wikipedia.
 
 <img src="images/wiki_arch.svg">
 
+???
+
+Both standard usage patterns
+
+And things of interest
 
 ---
 class: center
@@ -582,7 +587,7 @@ NavTabLayout -> 4 tab options -> FeedFragment.newInstance
 ```java
 public class FeedFragment extends Fragment implements BackPressedHandler {
     @BindView(R.id.feed_swipe_refresh_layout) SwipeRefreshLayout swipeRefreshLayout;
-    @BindView(R.id.fragment_feed_feed) FeedView feedView;
+    @BindView(R.id.fragment_feed_feed) FeedView feedView;  
     @BindView(R.id.fragment_feed_header) View feedHeader;
     private FeedAdapter<?> feedAdapter;
     private WikipediaApp app;
@@ -625,7 +630,14 @@ public class FeedFragment extends Fragment implements BackPressedHandler {
 ```java
 public class FeedFragment extends Fragment implements BackPressedHandler {
     ...
-    @BindView(R.id.fragment_feed_feed) FeedView feedView;
+    @BindView(R.id.fragment_feed_feed) FeedView feedView;  
+    ...
+    private FeedAdapter<?> feedAdapter;
+    ...
+    @Nullable @Override public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {  
+        ...
+        feedView.setAdapter(feedAdapter);  
+        ...
 ```
 </a>
 
@@ -1468,6 +1480,10 @@ public class AllEpisodesRecycleAdapter extends RecyclerView.Adapter<AllEpisodesR
 --
 
 ## Build a better fishing rod
+
+--
+
+## *with Gradle!*
 
 ???
 
